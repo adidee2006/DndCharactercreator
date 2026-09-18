@@ -27,6 +27,7 @@ import { generateCharacterSheetPdf } from '../lib/pdfExport';
 import { characterToExportFile, downloadJson, slugFilename } from '../lib/jsonExport';
 import { totalValueInGp, autoExchange, formatGp } from '../lib/currency';
 import { itemDescription } from '../lib/itemSummary';
+import { sourceCitation } from '../lib/sourceCitation';
 import { isProficientWithItem, isEligibleForFeat, getMaxAvailableSpellLevel, getSpellCounts } from '../lib/eligibility';
 import { fightingStyles, fightingStylesByKey } from '../data/srd/fightingStyles';
 import { v4 as uuid } from 'uuid';
@@ -644,6 +645,9 @@ function SpellsTab({
                             {sp.castingTime} • {sp.range} • {sp.components} • {sp.duration}
                           </p>
                           <p className="text-stone-600 dark:text-stone-300">{sp.description || 'No description available.'}</p>
+                          {sourceCitation(sp.source) && (
+                            <p className="mt-2 text-xs italic text-stone-400">{sourceCitation(sp.source)}</p>
+                          )}
                         </div>
                       )}
                     </div>
@@ -761,17 +765,22 @@ function InventoryTab({
               {isOpen && (
                 <div className="border-t border-stone-200 px-3 py-3 text-sm dark:border-stone-800">
                   {item ? (
-                    item.contains ? (
+                    Array.isArray(item.contains) && item.contains.length > 0 ? (
                       <div className="mb-3">
                         <p className="mb-1 text-stone-500">Contains:</p>
                         <ul className="ml-4 list-disc space-y-0.5 text-stone-500">
                           {item.contains.map((c, i) => (
-                            <li key={i}>{c}</li>
+                            <li key={i}>{String(c)}</li>
                           ))}
                         </ul>
                       </div>
                     ) : (
-                      <p className="mb-3 text-stone-500">{itemDescription(item)}</p>
+                      <>
+                        <p className="mb-1 text-stone-500">{itemDescription(item)}</p>
+                        {sourceCitation(item.source) && (
+                          <p className="mb-3 text-xs italic text-stone-400">{sourceCitation(item.source)}</p>
+                        )}
+                      </>
                     )
                   ) : (
                     <p className="mb-3 text-stone-500">Custom item — no compendium entry.</p>
@@ -965,6 +974,7 @@ function FeaturesTab({
                 </div>
                 {feat.prerequisite && <p className="text-xs italic text-stone-400">Prerequisite: {feat.prerequisite}</p>}
                 <p className="text-stone-500">{feat.description}</p>
+                {sourceCitation(feat.source) && <p className="text-xs italic text-stone-400">{sourceCitation(feat.source)}</p>}
               </div>
             );
           })}

@@ -1,9 +1,8 @@
+import { compressToEncodedURIComponent, decompressFromEncodedURIComponent } from 'lz-string';
 import { listCharacters, getCharacter, saveCharacter } from './characters';
 import type { Character } from '../types/character';
 
 const SYNC_STORAGE_KEY = 'dnd-cc-sync-code';
-const API_BASE = 'https://jsonblob.com/api/jsonBlob';
-const FETCH_TIMEOUT_MS = 15000;
 
 export interface SyncPayload {
   format: 'dnd-character-creator/sync';
@@ -12,37 +11,19 @@ export interface SyncPayload {
   characters: Character[];
 }
 
-async function fetchWithTimeout(url: string, init: RequestInit): Promise<Response> {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
-  try {
-    return await fetch(url, { ...init, signal: controller.signal });
-  } catch (err) {
-    if ((err as Error).name === 'AbortError') throw new Error('The sync service timed out. Try again in a moment.');
-    if (err instanceof TypeError) {
-      throw new Error(
-        "Couldn't reach the sync service (jsonblob.com). Check your internet connection — if this keeps happening, use Export/Import JSON instead.",
-      );
-    }
-    throw err;
-  } finally {
-    clearTimeout(timer);
-  }
-}
-
-/** Pulls a blob id out of wherever the service put it — a Location header, or a field in the JSON body. */
-function extractBlobId(locationHeader: string | null, body: unknown): string | null {
-  const fromHeader = locationHeader?.split('/').filter(Boolean).pop();
-  if (fromHeader) return fromHeader;
-  if (body && typeof body === 'object') {
-    const b = body as Record<string, unknown>;
-    for (const key of ['id', 'blobId', 'uri', 'url']) {
-      const v = b[key];
-      if (typeof v === 'string') return v.split('/').filter(Boolean).pop() ?? v;
-    }
-  }
-  return null;
-}
+/*
+ * Cross-device sync is entirely local: the "code" is the character data
+ * itself, compressed and encoded, never uploaded anywhere. Earlier this
+ * used jsonblob.com as a free anonymous backing store, but that meant
+ * every push/pull depended on a third-party service being reachable *and*
+ * allowing cross-origin browser requests — which turned out to fail in
+ * practice (the browser's CORS preflight for a JSON POST was being
+ * rejected, surfacing as an opaque "couldn't reach the service" network
+ * error with no way to fix it from this app). A self-contained code has no
+ * server to be unreachable, works offline, and is actually more private
+ * (nothing leaves the user's own devices except what they choose to paste
+ * or send themselves).
+ */
 
 export function getStoredSyncCode(): string | null {
   try {
@@ -57,7 +38,7 @@ export function setStoredSyncCode(code: string | null) {
     if (code) localStorage.setItem(SYNC_STORAGE_KEY, code);
     else localStorage.removeItem(SYNC_STORAGE_KEY);
   } catch {
-    // localStorage unavailable (private browsing etc.) — sync code just won't persist across reloads.
+    // localStorage unavailable (private browsing etc.) — code just won't persist across reloads.
   }
 }
 
@@ -66,42 +47,37 @@ async function buildPayload(): Promise<SyncPayload> {
   return { format: 'dnd-character-creator/sync', version: 1, savedAt: new Date().toISOString(), characters };
 }
 
-/** Creates a brand-new sync blob from everything currently saved locally, returning its shareable code. */
+/** Builds a fresh sync code from everything currently saved on this device. Regenerate after making changes you want to share. */
 export async function createSyncCode(): Promise<string> {
   const payload = await buildPayload();
-  const res = await fetchWithTimeout(API_BASE, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  });
-  if (!res.ok) throw new Error(`Sync service returned ${res.status} ${res.statusText}.`);
-  let body: unknown = null;
-  try {
-    body = await res.json();
-  } catch {
-    // Some deployments return an empty body on create — that's fine, we only need the Location header then.
-  }
-  const id = extractBlobId(res.headers.get('location'), body);
-  if (!id) {
-    throw new Error(
-      "The sync service didn't return a usable code. It may have changed its API — please use Export/Import JSON instead for now.",
-    );
-  }
-  setStoredSyncCode(id);
-  return id;
+  const code = compressToEncodedURIComponent(JSON.stringify(payload));
+  setStoredSyncCode(code);
+  return code;
 }
 
-/** Overwrites an existing sync code's data with everything currently saved locally. */
-export async function pushToSyncCode(code: string): Promise<void> {
-  const payload = await buildPayload();
-  const res = await fetchWithTimeout(`${API_BASE}/${encodeURIComponent(code)}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  });
-  if (res.status === 404) throw new Error('That sync code no longer exists. Create a new one instead.');
-  if (!res.ok) throw new Error(`Sync service returned ${res.status} ${res.statusText}.`);
-  setStoredSyncCode(code);
+function decodePayload(code: string): SyncPayload {
+  const trimmed = code.trim();
+  if (!trimmed) throw new Error('Paste a sync code first.');
+  let json: string | null;
+  try {
+    json = decompressFromEncodedURIComponent(trimmed);
+  } catch {
+    json = null;
+  }
+  if (!json) {
+    throw new Error("That doesn't look like a valid sync code — check you copied the whole thing with nothing missing.");
+  }
+  let data: unknown;
+  try {
+    data = JSON.parse(json);
+  } catch {
+    throw new Error('That sync code decoded but its contents were not valid — it may be from an incompatible version of this app.');
+  }
+  const payload = data as Partial<SyncPayload>;
+  if (!payload || payload.format !== 'dnd-character-creator/sync' || !Array.isArray(payload.characters)) {
+    throw new Error("That code doesn't point to character data from this app.");
+  }
+  return payload as SyncPayload;
 }
 
 export interface PullResult {
@@ -111,23 +87,15 @@ export interface PullResult {
 }
 
 /**
- * Fetches a sync code's data and upserts every character into the local
- * database. To avoid a pull silently clobbering newer edits made locally
- * before they were pushed, a character already present locally is only
+ * Decodes a sync code and upserts every character into the local database.
+ * To avoid a pull silently clobbering newer edits made locally since the
+ * code was generated, a character already present locally is only
  * overwritten if the incoming copy has a newer `updatedAt`; otherwise the
- * local version is kept and it's counted under `keptLocal`. Never deletes
- * local characters that aren't in the pulled payload.
+ * local version is kept and counted under `keptLocal`. Never deletes local
+ * characters that aren't in the pulled payload.
  */
-export async function pullFromSyncCode(code: string): Promise<PullResult> {
-  const res = await fetchWithTimeout(`${API_BASE}/${encodeURIComponent(code)}`, {
-    headers: { Accept: 'application/json' },
-  });
-  if (res.status === 404) throw new Error("That sync code wasn't found. Double-check it, or create a new one on the other device.");
-  if (!res.ok) throw new Error(`Sync service returned ${res.status} ${res.statusText}.`);
-  const data = (await res.json()) as Partial<SyncPayload>;
-  if (!data || !Array.isArray(data.characters)) {
-    throw new Error('That code doesn’t point to character data from this app.');
-  }
+export async function importSyncCode(code: string): Promise<PullResult> {
+  const data = decodePayload(code);
   let imported = 0;
   let keptLocal = 0;
   for (const character of data.characters) {
@@ -140,6 +108,6 @@ export async function pullFromSyncCode(code: string): Promise<PullResult> {
     await saveCharacter(character as Character);
     imported++;
   }
-  setStoredSyncCode(code);
+  setStoredSyncCode(code.trim());
   return { imported, keptLocal, savedAt: data.savedAt ?? new Date().toISOString() };
 }

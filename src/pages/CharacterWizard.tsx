@@ -16,6 +16,7 @@ import {
 } from '../lib/abilityGeneration';
 import { getFinalAbilityScores, abilityModifier, formatModifier, getSpellcastingClasses, getHitPointsMax } from '../lib/calc';
 import { itemDescription } from '../lib/itemSummary';
+import { sourceCitation } from '../lib/sourceCitation';
 import { isProficientWithItem, getMaxAvailableSpellLevel, getSpellCounts } from '../lib/eligibility';
 import { fightingStyles, fightingStylesByKey } from '../data/srd/fightingStyles';
 
@@ -773,14 +774,17 @@ function EquipmentStep({
               {item && (
                 <details className="mt-1">
                   <summary className="cursor-pointer text-xs text-stone-500">Description</summary>
-                  {item.contains ? (
+                  {Array.isArray(item.contains) && item.contains.length > 0 ? (
                     <ul className="mt-1 ml-4 list-disc space-y-0.5 text-xs text-stone-500">
                       {item.contains.map((c, i) => (
-                        <li key={i}>{c}</li>
+                        <li key={i}>{String(c)}</li>
                       ))}
                     </ul>
                   ) : (
                     <p className="mt-1 text-xs text-stone-500">{itemDescription(item)}</p>
+                  )}
+                  {sourceCitation(item.source) && (
+                    <p className="mt-1 text-xs italic text-stone-400">{sourceCitation(item.source)}</p>
                   )}
                 </details>
               )}
@@ -906,6 +910,9 @@ function SpellsStep({
                     {sp.castingTime} • {sp.range} • {sp.components} • {sp.duration}
                   </p>
                   <p className="mt-1 text-xs text-stone-500">{sp.description}</p>
+                  {sourceCitation(sp.source) && (
+                    <p className="mt-1 text-xs italic text-stone-400">{sourceCitation(sp.source)}</p>
+                  )}
                 </details>
               )}
             </div>

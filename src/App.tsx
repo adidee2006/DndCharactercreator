@@ -1,9 +1,11 @@
 import { useEffect } from 'react';
-import { Link, Outlet } from 'react-router-dom';
+import { Link, Outlet, useLocation } from 'react-router-dom';
 import { useUiStore } from './store/uiStore';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 function App() {
   const { theme, toggleTheme } = useUiStore();
+  const location = useLocation();
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark');
@@ -47,7 +49,9 @@ function App() {
         </div>
       </header>
       <main className="mx-auto max-w-6xl px-4 py-6">
-        <Outlet />
+        <ErrorBoundary key={location.pathname}>
+          <Outlet />
+        </ErrorBoundary>
       </main>
       <footer className="mx-auto max-w-6xl px-4 py-8 text-center text-xs text-stone-500">
         Rules content adapted from the D&D 5th Edition SRD. Not affiliated with or endorsed by Wizards of the Coast.

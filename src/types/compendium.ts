@@ -60,6 +60,16 @@ export interface SourceInfo {
   origin: 'srd' | 'remote' | 'custom';
   /** Human readable source label, e.g. "SRD 5.1", "Open5e", "My Homebrew Compendium". */
   label: string;
+  /** The rulebook this entry is printed in, e.g. "Player's Handbook", when known. */
+  book?: string;
+  /**
+   * Page number within `book`, when known. Left unset for the bundled SRD
+   * data: the free SRD document doesn't share the Player's Handbook's
+   * pagination, so a PHB page number can't be derived from it without
+   * risking a wrong citation — only set this from a source that actually
+   * carries real page numbers.
+   */
+  page?: number;
 }
 
 export interface AbilityBonus {

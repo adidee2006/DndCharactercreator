@@ -51,6 +51,8 @@ export default function CompendiumManager() {
   const [progress, setProgress] = useState<SyncProgress | null>(null);
   const [syncResult, setSyncResult] = useState<SyncResult | null>(null);
   const [importResult, setImportResult] = useState<string | null>(null);
+  const [packLoading, setPackLoading] = useState(false);
+  const [packStatus, setPackStatus] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const bump = useCompendiumVersion((s) => s.bump);
 
@@ -114,6 +116,28 @@ export default function CompendiumManager() {
       setImportResult(`Imported: ${summary || 'nothing found'}.${result.warnings.length ? ` Warnings: ${result.warnings.join(' ')}` : ''}`);
     } catch (err) {
       alert(`Couldn’t import that file: ${(err as Error).message}`);
+    }
+  }
+
+  async function handleLoadCommunityPack() {
+    setPackLoading(true);
+    setPackStatus(null);
+    try {
+      const res = await fetch(`${import.meta.env.BASE_URL}data/dnd-data-pack.json`);
+      if (!res.ok) throw new Error(`Couldn't load the pack (${res.status} ${res.statusText}).`);
+      const json = await res.json();
+      const result = await importCustomCompendium(json);
+      bump();
+      await refresh();
+      const summary = Object.entries(result.counts)
+        .filter(([, n]) => n > 0)
+        .map(([k, n]) => `${n} ${k}`)
+        .join(', ');
+      setPackStatus(`Loaded: ${summary}.`);
+    } catch (err) {
+      setPackStatus(`Couldn't load the community pack: ${(err as Error).message}`);
+    } finally {
+      setPackLoading(false);
     }
   }
 
@@ -224,6 +248,27 @@ export default function CompendiumManager() {
       </div>
 
       <div className="card mt-6 p-5">
+        <h2 className="section-title">Community Content Pack</h2>
+        <p className="mb-2 text-sm text-stone-500">
+          Adds 319 core Player's Handbook spells and 658 Dungeon Master's Guide magic items, bundled with the app (no
+          internet connection needed). Sourced from the{' '}
+          <span className="font-mono text-xs">nick-aschenbach/dnd-data</span> project on GitHub, filtered down to
+          official Wizards of the Coast, 2014-ruleset content only — everything else in that dataset (homebrew from
+          other publishers, the newer 2024 rulebooks, monster stat blocks) is left out, either because it doesn't
+          match this app's ruleset or because its structure was too unreliable to convert without risking wrong data.
+        </p>
+        <p className="mb-3 text-xs text-stone-500">
+          Note: none of this app's data sources — including this pack — include real Player's Handbook page numbers;
+          that information isn't published in any freely available dataset. Entries show which <em>book</em> they're
+          from where known, but not a page number.
+        </p>
+        <button className="btn-primary" onClick={handleLoadCommunityPack} disabled={packLoading}>
+          {packLoading ? 'Loading…' : 'Load Community Pack'}
+        </button>
+        {packStatus && <p className="mt-2 text-xs text-stone-500">{packStatus}</p>}
+      </div>
+
+      <div className="card mt-6 p-5">
         <h2 className="section-title">Create Custom Content</h2>
         <p className="mb-3 text-sm text-stone-500">
           Build a homebrew item, spell, or feat with a form instead of hand-writing JSON. Saved entries show up
@@ -306,6 +351,8 @@ function CustomItemForm({ onSaved }: { onSaved: () => void }) {
   const [armorCategory, setArmorCategory] = useState<'light' | 'medium' | 'heavy'>('light');
   const [rarity, setRarity] = useState('');
   const [requiresAttunement, setRequiresAttunement] = useState(false);
+  const [book, setBook] = useState('');
+  const [page, setPage] = useState('');
   const [saved, setSaved] = useState<string | null>(null);
 
   async function handleSave() {
@@ -317,6 +364,7 @@ function CustomItemForm({ onSaved }: { onSaved: () => void }) {
       cost: cost.trim() || undefined,
       weight: weight ? Number(weight) : undefined,
       description: description.trim() || undefined,
+      source: book.trim() ? { book: book.trim(), page: page ? Number(page) : undefined } : undefined,
     };
     if (type === 'weapon') {
       entry.damage = damage.trim() || undefined;
@@ -347,6 +395,8 @@ function CustomItemForm({ onSaved }: { onSaved: () => void }) {
     setWeaponProperties('');
     setArmorClassBase('');
     setRarity('');
+    setBook('');
+    setPage('');
     onSaved();
   }
 
@@ -441,6 +491,14 @@ function CustomItemForm({ onSaved }: { onSaved: () => void }) {
         <label className="label">Description</label>
         <textarea className="input" rows={2} value={description} onChange={(e) => setDescription(e.target.value)} />
       </div>
+      <div>
+        <label className="label">Source Book (optional)</label>
+        <input className="input" value={book} onChange={(e) => setBook(e.target.value)} placeholder="e.g. My Homebrew Pack" />
+      </div>
+      <div>
+        <label className="label">Page (optional)</label>
+        <input type="number" className="input" value={page} onChange={(e) => setPage(e.target.value)} />
+      </div>
       <div className="sm:col-span-2">
         <button className="btn-primary" onClick={handleSave} disabled={!name.trim()}>
           Save Item
@@ -464,6 +522,8 @@ function CustomSpellForm({ onSaved }: { onSaved: () => void }) {
   const [ritual, setRitual] = useState(false);
   const [classes, setClasses] = useState<string[]>([]);
   const [description, setDescription] = useState('');
+  const [book, setBook] = useState('');
+  const [page, setPage] = useState('');
   const [saved, setSaved] = useState<string | null>(null);
 
   function toggleClass(key: string) {
@@ -476,12 +536,27 @@ function CustomSpellForm({ onSaved }: { onSaved: () => void }) {
     await importCustomCompendium({
       label: 'My Custom Content',
       spells: {
-        [key]: { name: name.trim(), level, school, castingTime, range, components, duration, concentration, ritual, classes, description },
+        [key]: {
+          name: name.trim(),
+          level,
+          school,
+          castingTime,
+          range,
+          components,
+          duration,
+          concentration,
+          ritual,
+          classes,
+          description,
+          source: book.trim() ? { book: book.trim(), page: page ? Number(page) : undefined } : undefined,
+        },
       },
     });
     setSaved(`Saved "${name.trim()}" to your compendium.`);
     setName('');
     setDescription('');
+    setBook('');
+    setPage('');
     onSaved();
   }
 
@@ -548,6 +623,14 @@ function CustomSpellForm({ onSaved }: { onSaved: () => void }) {
         <label className="label">Description</label>
         <textarea className="input" rows={2} value={description} onChange={(e) => setDescription(e.target.value)} />
       </div>
+      <div>
+        <label className="label">Source Book (optional)</label>
+        <input className="input" value={book} onChange={(e) => setBook(e.target.value)} placeholder="e.g. My Homebrew Pack" />
+      </div>
+      <div>
+        <label className="label">Page (optional)</label>
+        <input type="number" className="input" value={page} onChange={(e) => setPage(e.target.value)} />
+      </div>
       <div className="sm:col-span-2">
         <button className="btn-primary" onClick={handleSave} disabled={!name.trim()}>
           Save Spell
@@ -562,6 +645,8 @@ function CustomFeatForm({ onSaved }: { onSaved: () => void }) {
   const [name, setName] = useState('');
   const [prerequisite, setPrerequisite] = useState('');
   const [description, setDescription] = useState('');
+  const [book, setBook] = useState('');
+  const [page, setPage] = useState('');
   const [saved, setSaved] = useState<string | null>(null);
 
   async function handleSave() {
@@ -569,12 +654,21 @@ function CustomFeatForm({ onSaved }: { onSaved: () => void }) {
     const key = slugify(name);
     await importCustomCompendium({
       label: 'My Custom Content',
-      feats: { [key]: { name: name.trim(), prerequisite: prerequisite.trim() || undefined, description } },
+      feats: {
+        [key]: {
+          name: name.trim(),
+          prerequisite: prerequisite.trim() || undefined,
+          description,
+          source: book.trim() ? { book: book.trim(), page: page ? Number(page) : undefined } : undefined,
+        },
+      },
     });
     setSaved(`Saved "${name.trim()}" to your compendium.`);
     setName('');
     setPrerequisite('');
     setDescription('');
+    setBook('');
+    setPage('');
     onSaved();
   }
 
@@ -591,6 +685,16 @@ function CustomFeatForm({ onSaved }: { onSaved: () => void }) {
       <div>
         <label className="label">Description</label>
         <textarea className="input" rows={3} value={description} onChange={(e) => setDescription(e.target.value)} />
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="label">Source Book (optional)</label>
+          <input className="input" value={book} onChange={(e) => setBook(e.target.value)} placeholder="e.g. My Homebrew Pack" />
+        </div>
+        <div>
+          <label className="label">Page (optional)</label>
+          <input type="number" className="input" value={page} onChange={(e) => setPage(e.target.value)} />
+        </div>
       </div>
       <div>
         <button className="btn-primary" onClick={handleSave} disabled={!name.trim()}>
