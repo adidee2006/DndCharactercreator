@@ -1,6 +1,7 @@
 import type { Character } from '../types/character';
 import type { Compendium, Item, Feat } from '../types/compendium';
 import { getSpellSlots, getPactMagicSlots, getSpellcastingClasses, getAbilityModifiers } from './calc';
+import { fightingStylesByKey } from '../data/srd/fightingStyles';
 
 /**
  * Weapon/armor/tool proficiencies from the character's classes, merged with
@@ -157,6 +158,11 @@ export function getSpellCounts(character: Character, compendium: Compendium): Sp
     } else if (sc.preparedCasterAbilityMod) {
       spellLimit += Math.max(1, cl.level + mods[sc.ability]);
     }
+  }
+  // Blessed Warrior / Druidic Warrior grant 2 cantrips on top of whatever the
+  // class's own spellcasting table allows, so they don't count against it.
+  if (character.fightingStyle && fightingStylesByKey[character.fightingStyle]?.grantsCantripsFrom) {
+    cantripLimit += character.fightingStyleCantrips?.length ?? 2;
   }
   return { cantripLimit, spellLimit };
 }

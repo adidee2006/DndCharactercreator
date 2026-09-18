@@ -84,6 +84,8 @@ export interface Character {
   feats: string[];
   /** Key into fightingStyles, for classes that grant a Fighting Style choice (Fighter, Paladin, Ranger). */
   fightingStyle?: string;
+  /** Cantrips chosen for a class-restricted Fighting Style that grants them (Blessed Warrior, Druidic Warrior). */
+  fightingStyleCantrips?: string[];
 
   hpMax: number;
   hpCurrent: number;

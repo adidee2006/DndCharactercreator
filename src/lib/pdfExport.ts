@@ -19,10 +19,7 @@ import {
   getSpellSlots,
   getPactMagicSlots,
   formatModifier,
-  isRangedWeapon,
-  getFightingStyleAttackBonus,
-  getFightingStyleDamageBonus,
-  getExhaustionPenalty,
+  getWeaponAttacks,
 } from './calc';
 
 const PAGE_W = 612;
@@ -288,27 +285,19 @@ export async function generateCharacterSheetPdf(character: Character, compendium
   // Attacks
   sectionHeader(ctx, 'Attacks & Weapons', MARGIN, y - 10, PAGE_W - MARGIN * 2);
   y -= 18;
-  const weapons = character.inventory
-    .map((inv) => (inv.itemKey ? compendium.items[inv.itemKey] : undefined))
-    .filter((item) => item?.type === 'weapon');
-  const attackRows = Math.max(4, Math.min(8, weapons.length));
+  const weaponAttacks = getWeaponAttacks(character, compendium);
+  const attackRows = Math.max(4, Math.min(8, weaponAttacks.length));
   box(ctx, MARGIN, y - attackRows * 12 - 14, PAGE_W - MARGIN * 2, attackRows * 12 + 14);
   text(ctx, 'Weapon', MARGIN + 4, y - 10, { size: 7, color: MUTED });
   text(ctx, 'Attack Bonus', MARGIN + 240, y - 10, { size: 7, color: MUTED });
   text(ctx, 'Damage / Type', MARGIN + 340, y - 10, { size: 7, color: MUTED });
   y -= 22;
   for (let i = 0; i < attackRows; i++) {
-    const w = weapons[i];
-    if (w) {
-      const ranged = isRangedWeapon(w);
-      const hasFinesse = w.weaponProperties?.some((p) => p.startsWith('Finesse'));
-      const abilityMod = ranged ? mods.dex : hasFinesse ? Math.max(mods.str, mods.dex) : mods.str;
-      const attackBonus = abilityMod + prof + getFightingStyleAttackBonus(character, w) + getExhaustionPenalty(character);
-      const damageBonus = abilityMod + getFightingStyleDamageBonus(character, w);
-      const damageText = w.damage ? `${w.damage}${damageBonus !== 0 ? formatModifier(damageBonus) : ''} ${w.damageType ?? ''}`.trim() : '';
-      text(ctx, w.name, MARGIN + 4, y, { size: 8 });
-      text(ctx, formatModifier(attackBonus), MARGIN + 240, y, { size: 8 });
-      text(ctx, damageText, MARGIN + 340, y, { size: 8 });
+    const wa = weaponAttacks[i];
+    if (wa) {
+      text(ctx, wa.item.name, MARGIN + 4, y, { size: 8 });
+      text(ctx, formatModifier(wa.attackBonus), MARGIN + 240, y, { size: 8 });
+      text(ctx, wa.damageText, MARGIN + 340, y, { size: 8 });
     }
     y -= 12;
   }

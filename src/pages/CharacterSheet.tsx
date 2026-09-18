@@ -23,6 +23,7 @@ import {
   getCarryingCapacity,
   formatModifier,
   getExhaustionPenalty,
+  getWeaponAttacks,
 } from '../lib/calc';
 import { knownConditionEffect } from '../data/conditions';
 import { generateCharacterSheetPdf } from '../lib/pdfExport';
@@ -319,8 +320,42 @@ function CombatTab({
     update({ hpCurrent: Math.min(hpMax, character.hpCurrent + damageAmount) });
   }
 
+  const weaponAttacks = getWeaponAttacks(character, compendium);
+
   return (
-    <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+    <div className="space-y-6">
+      {weaponAttacks.length > 0 && (
+        <div>
+          <h3 className="section-title">Attacks</h3>
+          <p className="mb-2 text-xs text-stone-500">
+            {character.inventory.some((inv) => inv.equipped && compendium.items[inv.itemKey ?? '']?.type === 'weapon')
+              ? 'Equipped weapons.'
+              : 'No weapons marked Equipped in Inventory — showing everything you’re carrying instead.'}
+          </p>
+          <div className="overflow-x-auto rounded-lg border border-stone-300 dark:border-stone-700">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-stone-300 text-left text-xs uppercase text-stone-500 dark:border-stone-700">
+                  <th className="px-3 py-2">Weapon</th>
+                  <th className="px-3 py-2">Attack Bonus</th>
+                  <th className="px-3 py-2">Damage / Type</th>
+                </tr>
+              </thead>
+              <tbody>
+                {weaponAttacks.map((wa) => (
+                  <tr key={wa.item.key} className="border-b border-stone-200 last:border-0 dark:border-stone-800">
+                    <td className="px-3 py-1.5 font-medium">{wa.item.name}</td>
+                    <td className="px-3 py-1.5">{formatModifier(wa.attackBonus)}</td>
+                    <td className="px-3 py-1.5">{wa.damageText || '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
       <div className="space-y-3">
         <h3 className="section-title">Vitals</h3>
         <div className="grid grid-cols-3 gap-2">
@@ -367,6 +402,9 @@ function CombatTab({
             <p className="mt-1 text-xs text-stone-500">{fightingStylesByKey[character.fightingStyle]?.description}</p>
           )}
         </div>
+        {character.fightingStyle && fightingStylesByKey[character.fightingStyle]?.grantsCantripsFrom && (
+          <FightingStyleCantripPicker character={character} update={update} compendium={compendium} />
+        )}
       </div>
 
       <div className="space-y-3">
@@ -544,6 +582,58 @@ function CombatTab({
           Carrying Capacity: {carry.carryCapacity} lb • Encumbered at {carry.encumbered} lb
         </p>
       </div>
+      </div>
+    </div>
+  );
+}
+
+function FightingStyleCantripPicker({
+  character,
+  update,
+  compendium,
+}: {
+  character: Character;
+  update: (p: Partial<Character>) => void;
+  compendium: ReturnType<typeof useCompendium>['compendium'];
+}) {
+  const style = fightingStylesByKey[character.fightingStyle!];
+  const grantClass = style.grantsCantripsFrom!;
+  const options = Object.values(compendium.spells)
+    .filter((sp) => sp.level === 0 && sp.classes.includes(grantClass))
+    .sort((a, b) => a.name.localeCompare(b.name));
+  const current = character.fightingStyleCantrips ?? [];
+
+  function setChoice(index: 0 | 1, key: string) {
+    const next = [current[0] ?? '', current[1] ?? ''];
+    next[index] = key;
+    const cleaned = next.filter(Boolean);
+    const spellsKnown = new Set(character.spellsKnown);
+    for (const old of current) if (old && !cleaned.includes(old)) spellsKnown.delete(old);
+    for (const k of cleaned) spellsKnown.add(k);
+    update({ fightingStyleCantrips: cleaned, spellsKnown: [...spellsKnown] });
+  }
+
+  return (
+    <div className="rounded-lg border border-stone-300 p-3 dark:border-stone-700">
+      <label className="label">
+        {style.name} Cantrips ({compendium.classes[grantClass]?.name ?? grantClass} list)
+      </label>
+      <p className="mt-1 text-xs text-stone-500">
+        Choose 2 cantrips from the {compendium.classes[grantClass]?.name ?? grantClass} spell list. They're added to your
+        known spells below.
+      </p>
+      <div className="mt-1 grid grid-cols-2 gap-2">
+        {([0, 1] as const).map((i) => (
+          <select key={i} className="input" value={current[i] ?? ''} onChange={(e) => setChoice(i, e.target.value)}>
+            <option value="">Choose…</option>
+            {options.map((sp) => (
+              <option key={sp.key} value={sp.key} disabled={current.includes(sp.key) && current[i] !== sp.key}>
+                {sp.name}
+              </option>
+            ))}
+          </select>
+        ))}
+      </div>
     </div>
   );
 }
@@ -562,6 +652,7 @@ function SpellsTab({
   const pact = getPactMagicSlots(character, compendium);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [showAllLevels, setShowAllLevels] = useState(false);
+  const [showAnyClass, setShowAnyClass] = useState(false);
 
   if (spellcasting.length === 0) {
     return <p className="text-stone-500">This character has no spellcasting classes.</p>;
@@ -586,7 +677,7 @@ function SpellsTab({
   const cantripsUsed = known.filter((sp) => sp.level === 0).length;
   const spellsUsed = known.filter((sp) => sp.level > 0).length;
   const learnableSpells = Object.values(compendium.spells)
-    .filter((sp) => sp.classes.some((c) => classKeys.includes(c)))
+    .filter((sp) => showAnyClass || sp.classes.some((c) => classKeys.includes(c)))
     .filter((sp) => !character.spellsKnown.includes(sp.key))
     .filter((sp) => showAllLevels || sp.level === 0 || sp.level <= maxLevel)
     .sort((a, b) => a.level - b.level || a.name.localeCompare(b.name));
@@ -611,19 +702,34 @@ function SpellsTab({
       <div className="money-card mb-4">
         <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
           <h3 className="section-title mb-0">Learn a New Spell</h3>
-          <label className="flex items-center gap-1 text-xs text-stone-500">
-            <input type="checkbox" checked={showAllLevels} onChange={(e) => setShowAllLevels(e.target.checked)} />
-            Show levels above what I can cast yet
-          </label>
+          <div className="flex flex-wrap gap-3">
+            <label className="flex items-center gap-1 text-xs text-stone-500">
+              <input type="checkbox" checked={showAllLevels} onChange={(e) => setShowAllLevels(e.target.checked)} />
+              Show levels above what I can cast yet
+            </label>
+            <label className="flex items-center gap-1 text-xs text-stone-500">
+              <input type="checkbox" checked={showAnyClass} onChange={(e) => setShowAnyClass(e.target.checked)} />
+              Show spells from any class
+            </label>
+          </div>
         </div>
         <select className="input" value="" onChange={(e) => learnSpell(e.target.value)}>
           <option value="">Choose a spell to add…</option>
           {learnableSpells.map((sp) => (
             <option key={sp.key} value={sp.key}>
               {sp.name} ({sp.level === 0 ? 'Cantrip' : `Lv ${sp.level}`})
+              {showAnyClass && !sp.classes.some((c) => classKeys.includes(c))
+                ? ` — ${sp.classes.map((c) => compendium.classes[c]?.name ?? c).join('/')}`
+                : ''}
             </option>
           ))}
         </select>
+        {showAnyClass && (
+          <p className="mt-1.5 text-xs text-amber-700 dark:text-amber-400">
+            Homebrew/off-list spells are included here for flexibility — your DM may not allow spells outside your
+            class's list.
+          </p>
+        )}
         <p className="mt-1.5 text-xs text-stone-500">
           <span className={cantripsUsed > cantripLimit ? 'font-semibold text-red-700 dark:text-red-400' : ''}>
             Cantrips known: {cantripsUsed}/{cantripLimit}

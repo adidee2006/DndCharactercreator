@@ -94,7 +94,7 @@ export default function Sync() {
       <div className="card mb-6 p-5">
         <h2 className="section-title">How this works</h2>
         <ul className="ml-4 list-disc space-y-1 text-sm text-stone-500">
-          <li>This uses kvdb.io, a free, anonymous key/value storage service, as your own private save slot. Setting up sync creates that slot and gives you its code.</li>
+          <li>This uses a free, anonymous JSON storage service as your own private save slot. Setting up sync creates that slot and gives you its code.</li>
           <li>It's one code per device setup, reused every time — push to save your latest changes, pull on another device to fetch them. You don't need to make a new code after every edit.</li>
           <li>Anyone with your code can read or overwrite that data — treat it like an unlisted link, not a password. There's no encryption and no account behind it.</li>
           <li>If this service is ever unreachable or discontinued, Export/Import JSON on the Characters page always works as a reliable manual alternative that doesn't depend on any third party.</li>

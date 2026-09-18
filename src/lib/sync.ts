@@ -5,27 +5,31 @@ const SYNC_STORAGE_KEY = 'dnd-cc-sync-code';
 const FETCH_TIMEOUT_MS = 15000;
 
 /*
- * Cross-device sync uses kvdb.io, a free, key-less anonymous key/value
- * store built for exactly this kind of client-side use (no signup, no API
- * key, CORS-enabled REST calls straight from a browser). The first time
- * this device sets up sync, it creates its own private "bucket" (a POST to
- * kvdb.io with no auth); that bucket's id becomes the sync code. Push
- * writes the current character roster to a fixed key in that bucket; Pull
- * reads it back. Because it's the same bucket every time, one code keeps
- * working indefinitely — no need to regenerate it after every change.
+ * Cross-device sync uses ExtendsClass's free, key-less JSON storage API
+ * (api.extendsclass.com/json-storage) as an anonymous save slot. Creating a
+ * bin returns its id, which becomes the reusable sync code; push/pull
+ * read and write that same bin's JSON body directly.
  *
- * Honesty note: this app's previous sync backend (jsonblob.com) turned out
- * not to work from a real browser (almost certainly a CORS preflight
- * rejection on the POST), and this sandbox's network policy blocks every
- * third-party host, including kvdb.io, so this implementation could not be
- * exercised against the live service before shipping. The design is
- * defensive (timeouts, specific error messages) and JSON export/import
- * remains on the Characters page as a fallback that never depends on any
- * third party.
+ * This is the third backend this feature has used. jsonblob.com never
+ * worked from a real browser (its POST response only carries the new id in
+ * a Location header, which fetch() can't read cross-origin without the
+ * server explicitly exposing it — it didn't). kvdb.io's bucket-create
+ * endpoint requires a POST body with an email address (an empty POST
+ * 500s), and — more fundamentally — actually accepting writes to that
+ * bucket requires the email to be verified, which has no answer for a
+ * static page with no account system. ExtendsClass's bin storage
+ * explicitly documents CORS support and needs no account or key to create,
+ * read, or update a bin, which is why it was picked here.
+ *
+ * Every request that can fail surfaces the server's actual response body
+ * in the thrown error (not just a status code) — if this API's contract
+ * turns out to be subtly different than documented, the resulting error
+ * message should say so directly instead of leaving another round of
+ * guessing. JSON export/import on the Characters page remains a
+ * dependency-free fallback either way.
  */
 
-const KVDB_BASE = 'https://kvdb.io';
-const DATA_KEY = 'characters';
+const API_BASE = 'https://api.extendsclass.com/json-storage/bin';
 
 export interface SyncPayload {
   format: 'dnd-character-creator/sync';
@@ -43,13 +47,24 @@ async function fetchWithTimeout(url: string, init?: RequestInit): Promise<Respon
     if ((err as Error).name === 'AbortError') throw new Error('The sync service timed out. Try again in a moment.');
     if (err instanceof TypeError) {
       throw new Error(
-        "Couldn't reach the sync service (kvdb.io). Check your internet connection — if this keeps happening, use Export/Import JSON instead.",
+        "Couldn't reach the sync service. Check your internet connection — if this keeps happening, use Export/Import JSON instead.",
       );
     }
     throw err;
   } finally {
     clearTimeout(timer);
   }
+}
+
+/** Turns a failed response into an error that includes the server's own explanation, not just a status code. */
+async function errorFromResponse(res: Response, context: string): Promise<Error> {
+  let body = '';
+  try {
+    body = (await res.text()).trim().slice(0, 300);
+  } catch {
+    // ignore — body just won't be included
+  }
+  return new Error(`Sync service returned ${res.status} ${res.statusText} ${context}.${body ? ` (${body})` : ''}`);
 }
 
 export function getStoredSyncCode(): string | null {
@@ -74,29 +89,54 @@ async function buildPayload(): Promise<SyncPayload> {
   return { format: 'dnd-character-creator/sync', version: 1, savedAt: new Date().toISOString(), characters };
 }
 
-/** Creates a new private bucket on the sync service and returns its id as the shareable, reusable sync code. */
-export async function createSyncCode(): Promise<string> {
-  const res = await fetchWithTimeout(KVDB_BASE, { method: 'POST' });
-  if (!res.ok) throw new Error(`Sync service returned ${res.status} ${res.statusText} while setting up your code.`);
-  const bucket = (await res.text()).trim();
-  if (!bucket || bucket.length > 64 || /\s/.test(bucket)) {
-    throw new Error("The sync service didn't return a usable code. It may have changed its API — please use Export/Import JSON instead for now.");
+/** Pulls a bin id out of wherever the service put it — a JSON field, or a URI/URL whose last path segment is the id. */
+function extractBinId(body: unknown): string | null {
+  if (typeof body === 'string') return body.trim() || null;
+  if (body && typeof body === 'object') {
+    const b = body as Record<string, unknown>;
+    for (const key of ['id', 'bin', '_id', 'uri', 'url']) {
+      const v = b[key];
+      if (typeof v === 'string' && v.trim()) return v.trim().split('/').filter(Boolean).pop() ?? v.trim();
+    }
   }
-  setStoredSyncCode(bucket);
-  // Push the current roster immediately so the code is usable right away on another device.
-  await pushToSyncCode(bucket);
-  return bucket;
+  return null;
+}
+
+/** Creates a new bin on the sync service and returns its id as the shareable, reusable sync code. */
+export async function createSyncCode(): Promise<string> {
+  const payload = await buildPayload();
+  const res = await fetchWithTimeout(API_BASE, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) throw await errorFromResponse(res, 'while setting up your code');
+  let body: unknown = null;
+  try {
+    body = await res.json();
+  } catch {
+    // some deployments might return the id as plain text instead of JSON
+  }
+  const id = extractBinId(body) ?? extractBinId(await res.text().catch(() => null));
+  if (!id) {
+    throw new Error(
+      "The sync service didn't return a usable code. It may have changed its API — please use Export/Import JSON instead for now.",
+    );
+  }
+  setStoredSyncCode(id);
+  return id;
 }
 
 /** Overwrites the code's stored data with everything currently saved on this device. Safe to call repeatedly — the same code keeps working. */
 export async function pushToSyncCode(code: string): Promise<void> {
   const payload = await buildPayload();
-  const res = await fetchWithTimeout(`${KVDB_BASE}/${encodeURIComponent(code)}/${DATA_KEY}`, {
+  const res = await fetchWithTimeout(`${API_BASE}/${encodeURIComponent(code)}`, {
     method: 'PUT',
-    headers: { 'Content-Type': 'text/plain' },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
-  if (!res.ok) throw new Error(`Sync service returned ${res.status} ${res.statusText}.`);
+  if (res.status === 404) throw new Error('That sync code no longer exists. Create a new one instead.');
+  if (!res.ok) throw await errorFromResponse(res, 'while pushing');
   setStoredSyncCode(code);
 }
 
@@ -115,11 +155,11 @@ export interface PullResult {
  * local characters that aren't in the pulled payload.
  */
 export async function pullFromSyncCode(code: string): Promise<PullResult> {
-  const res = await fetchWithTimeout(`${KVDB_BASE}/${encodeURIComponent(code)}/${DATA_KEY}`);
+  const res = await fetchWithTimeout(`${API_BASE}/${encodeURIComponent(code)}`);
   if (res.status === 404) {
-    throw new Error("That sync code doesn't have anything pushed to it yet (or doesn't exist) — push from the other device first, or double-check the code.");
+    throw new Error("That sync code wasn't found — double-check it, or push from the other device first.");
   }
-  if (!res.ok) throw new Error(`Sync service returned ${res.status} ${res.statusText}.`);
+  if (!res.ok) throw await errorFromResponse(res, 'while pulling');
   const text = await res.text();
   let data: Partial<SyncPayload>;
   try {

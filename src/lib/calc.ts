@@ -168,6 +168,39 @@ export function getFightingStyleDamageBonus(character: Character, item: Item): n
   return 2;
 }
 
+export interface WeaponAttack {
+  item: Item;
+  attackBonus: number;
+  damageText: string;
+}
+
+/** Attack bonus + damage line for a weapon, using Str/Dex/Finesse rules, proficiency, fighting style, and exhaustion. */
+export function getWeaponAttack(character: Character, compendium: Compendium, item: Item): WeaponAttack {
+  const mods = getAbilityModifiers(character, compendium);
+  const prof = getProficiencyBonus(character);
+  const ranged = isRangedWeapon(item);
+  const hasFinesse = item.weaponProperties?.some((p) => p.startsWith('Finesse'));
+  const abilityMod = ranged ? mods.dex : hasFinesse ? Math.max(mods.str, mods.dex) : mods.str;
+  const attackBonus = abilityMod + prof + getFightingStyleAttackBonus(character, item) + getExhaustionPenalty(character);
+  const damageBonus = abilityMod + getFightingStyleDamageBonus(character, item);
+  const damageText = item.damage ? `${item.damage}${damageBonus !== 0 ? formatModifier(damageBonus) : ''} ${item.damageType ?? ''}`.trim() : '';
+  return { item, attackBonus, damageText };
+}
+
+/** All equipped weapons in the character's inventory, with attack/damage computed. Falls back to all carried weapons if none are marked equipped. */
+export function getWeaponAttacks(character: Character, compendium: Compendium): WeaponAttack[] {
+  const weaponEntries = character.inventory.filter((inv) => {
+    const item = inv.itemKey ? compendium.items[inv.itemKey] : undefined;
+    return item?.type === 'weapon';
+  });
+  const equipped = weaponEntries.filter((inv) => inv.equipped);
+  const source = equipped.length > 0 ? equipped : weaponEntries;
+  return source
+    .map((inv) => compendium.items[inv.itemKey!])
+    .filter((item): item is Item => !!item)
+    .map((item) => getWeaponAttack(character, compendium, item));
+}
+
 export function getSpeed(character: Character, compendium: Compendium): number {
   if (SPEED_ZERO_CONDITIONS.some((c) => hasCondition(character, c))) return 0;
   const base =

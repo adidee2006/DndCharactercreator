@@ -4,6 +4,8 @@ export interface FightingStyle {
   description: string;
   /** When set, only these classes (by class key) can choose this style — a 2024-rules class-specific option. */
   classRestriction?: string[];
+  /** When set, this style grants 2 cantrips chosen from the given class's spell list (Blessed Warrior, Druidic Warrior). */
+  grantsCantripsFrom?: string;
 }
 
 /**
@@ -64,12 +66,14 @@ export const fightingStyles: FightingStyle[] = [
     name: 'Blessed Warrior',
     description: 'You learn two cantrips of your choice from the Cleric spell list. They count as Paladin spells for you, and Charisma is your spellcasting ability for them. Whenever you gain a Paladin level, you can replace one of these cantrips with another Cleric cantrip.',
     classRestriction: ['paladin'],
+    grantsCantripsFrom: 'cleric',
   },
   {
     key: 'druidic-warrior',
     name: 'Druidic Warrior',
     description: 'You learn two cantrips of your choice from the Druid spell list. They count as Ranger spells for you, and Wisdom is your spellcasting ability for them. Whenever you gain a Ranger level, you can replace one of these cantrips with another Druid cantrip.',
     classRestriction: ['ranger'],
+    grantsCantripsFrom: 'druid',
   },
 ];
 
