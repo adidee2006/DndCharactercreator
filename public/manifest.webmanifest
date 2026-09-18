@@ -1,0 +1,13 @@
+{
+  "name": "Grimoire Sheets",
+  "short_name": "Grimoire",
+  "description": "D&D character sheet creator and manager",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0c0a09",
+  "theme_color": "#7f1d1d",
+  "icons": [
+    { "src": "favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}
