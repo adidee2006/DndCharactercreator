@@ -24,11 +24,21 @@ const CATEGORY_LABELS: Record<keyof Omit<Stats, 'bundledVersion'>, string> = {
   items: 'Items & Equipment',
 };
 
+interface SyncResult {
+  spellsFetched: number;
+  spellsSaved: number;
+  itemsFetched: number;
+  itemsSaved: number;
+  errors: string[];
+  fatal?: string;
+}
+
 export default function CompendiumManager() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [lastSync, setLastSync] = useState<string | undefined>();
   const [syncing, setSyncing] = useState(false);
   const [progress, setProgress] = useState<SyncProgress | null>(null);
+  const [syncResult, setSyncResult] = useState<SyncResult | null>(null);
   const [importResult, setImportResult] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const bump = useCompendiumVersion((s) => s.bump);
@@ -45,17 +55,19 @@ export default function CompendiumManager() {
   async function handleSync() {
     setSyncing(true);
     setProgress(null);
+    setSyncResult(null);
     try {
       const result = await syncCompendiumFromInternet((p) => setProgress(p));
-      bump();
-      await refresh();
-      if (result.errors.length) {
-        alert(`Sync finished with ${result.errors.length} warning(s). ${result.errors.slice(0, 3).join(' | ')}`);
+      setSyncResult(result);
+      // Only bump/refresh if something actually landed in the DB — bumping on a
+      // fully-failed sync makes every screen refetch for no visible change,
+      // which is exactly the "sync doesn't show anything" symptom.
+      if (result.spellsSaved > 0 || result.itemsSaved > 0) {
+        bump();
+        await refresh();
       }
     } catch (err) {
-      alert(
-        `Couldn’t reach the internet compendium source (dnd5eapi.co). This is expected if this device is offline or the network blocks it. Error: ${(err as Error).message}`,
-      );
+      setSyncResult({ spellsFetched: 0, spellsSaved: 0, itemsFetched: 0, itemsSaved: 0, errors: [], fatal: (err as Error).message });
     } finally {
       setSyncing(false);
     }
@@ -121,12 +133,46 @@ export default function CompendiumManager() {
           <button className="btn-ghost ml-2" onClick={handleClearRemote}>
             Clear Synced Data
           </button>
-          {progress && (
+          {syncing && progress && (
             <p className="mt-2 text-xs text-stone-500">
               {progress.stage} ({progress.fetched} fetched)
             </p>
           )}
-          {lastSync && <p className="mt-2 text-xs text-stone-500">Last synced: {new Date(lastSync).toLocaleString()}</p>}
+
+          {!syncing && syncResult && (
+            <div className="mt-3 rounded-lg border border-stone-300 p-3 text-sm dark:border-stone-700">
+              {syncResult.fatal ? (
+                <p className="text-red-700 dark:text-red-400">
+                  Sync couldn’t run at all: {syncResult.fatal}. This usually means this device is offline or the
+                  network is blocking requests to dnd5eapi.co.
+                </p>
+              ) : syncResult.spellsSaved === 0 && syncResult.itemsSaved === 0 ? (
+                <p className="text-red-700 dark:text-red-400">
+                  Sync ran but nothing was saved ({syncResult.errors.length} error
+                  {syncResult.errors.length === 1 ? '' : 's'}). Nothing in your compendium changed.
+                </p>
+              ) : (
+                <p className="text-emerald-700 dark:text-emerald-400">
+                  Saved {syncResult.spellsSaved} of {syncResult.spellsFetched} spells and {syncResult.itemsSaved} of{' '}
+                  {syncResult.itemsFetched} equipment entries to your local compendium.
+                </p>
+              )}
+              {syncResult.errors.length > 0 && (
+                <details className="mt-2">
+                  <summary className="cursor-pointer text-xs text-stone-500">
+                    {syncResult.errors.length} error{syncResult.errors.length === 1 ? '' : 's'} — click to view
+                  </summary>
+                  <ul className="mt-1 max-h-32 space-y-0.5 overflow-y-auto text-xs text-stone-500">
+                    {syncResult.errors.slice(0, 50).map((e, i) => (
+                      <li key={i}>{e}</li>
+                    ))}
+                  </ul>
+                </details>
+              )}
+            </div>
+          )}
+
+          {lastSync && <p className="mt-2 text-xs text-stone-500">Last successful sync: {new Date(lastSync).toLocaleString()}</p>}
         </div>
 
         <div className="card p-5">

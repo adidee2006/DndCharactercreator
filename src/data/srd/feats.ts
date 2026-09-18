@@ -83,6 +83,7 @@ export const feats: Record<string, Feat> = {
     key: 'war-caster',
     name: 'War Caster',
     source: SRD,
+    prerequisite: 'The ability to cast at least one spell',
     description: 'Advantage on Constitution saves to maintain concentration. You can perform somatic components even with weapons/shield in hand, and can cast a spell as an opportunity-attack reaction instead of a melee attack.',
   },
 };

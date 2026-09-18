@@ -108,6 +108,18 @@ export const PACT_MAGIC: Record<number, { slots: number; slotLevel: number }> = 
   20: { slots: 4, slotLevel: 5 },
 };
 
+const STANDARD_ASI_LEVELS = [4, 8, 12, 16, 19];
+
+/** Class levels that grant an Ability Score Improvement (or feat). Fighter and Rogue get extras. */
+export const ASI_LEVELS: Record<string, number[]> = {
+  fighter: [4, 6, 8, 12, 14, 16, 19],
+  rogue: [4, 8, 10, 12, 16, 19],
+};
+
+export function asiLevelsForClass(classKey: string): number[] {
+  return ASI_LEVELS[classKey] ?? STANDARD_ASI_LEVELS;
+}
+
 export const CARRY_CAPACITY_MULTIPLIER = 15; // lbs per point of Strength
 
 export function encumbranceThresholds(strength: number) {

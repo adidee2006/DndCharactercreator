@@ -76,6 +76,8 @@ export interface Character {
   armorProficiencies: string[];
   weaponProficiencies: string[];
   feats: string[];
+  /** Key into fightingStyles, for classes that grant a Fighting Style choice (Fighter, Paladin, Ranger). */
+  fightingStyle?: string;
 
   hpMax: number;
   hpCurrent: number;

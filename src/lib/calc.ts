@@ -1,5 +1,5 @@
 import type { Character, AbilityScores } from '../types/character';
-import type { AbilityKey, Compendium, SkillKey } from '../types/compendium';
+import type { AbilityKey, Compendium, Item, SkillKey } from '../types/compendium';
 import { ABILITY_KEYS, SKILLS } from '../types/compendium';
 import { proficiencyBonusForLevel, FULL_CASTER_SLOTS, encumbranceThresholds } from '../data/tables';
 
@@ -124,7 +124,28 @@ export function getArmorClass(character: Character, compendium: Compendium): num
 
   if (shield) base += shield.armorClassBase ?? 2;
 
+  // Defense fighting style: +1 AC while wearing armor (not while unarmored).
+  if (armor && character.fightingStyle === 'defense') base += 1;
+
   return base;
+}
+
+export function isRangedWeapon(item: Item): boolean {
+  return !!item.weaponProperties?.some((p) => p.startsWith('Ammunition'));
+}
+
+/** Attack roll bonus granted by the character's chosen Fighting Style for a specific weapon (e.g. Archery). */
+export function getFightingStyleAttackBonus(character: Character, item: Item): number {
+  if (character.fightingStyle === 'archery' && item.type === 'weapon' && isRangedWeapon(item)) return 2;
+  return 0;
+}
+
+/** Damage roll bonus granted by the character's chosen Fighting Style for a specific weapon (e.g. Dueling). */
+export function getFightingStyleDamageBonus(character: Character, item: Item): number {
+  if (character.fightingStyle !== 'dueling' || item.type !== 'weapon' || isRangedWeapon(item)) return 0;
+  const isTwoHanded = item.weaponProperties?.includes('Two-Handed');
+  if (isTwoHanded) return 0;
+  return 2;
 }
 
 export function getSpeed(character: Character, compendium: Compendium): number {

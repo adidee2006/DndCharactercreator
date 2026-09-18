@@ -212,14 +212,18 @@ export interface Item {
   cost?: string; // "15 gp"
   weight?: number; // lbs
   description?: string;
+  /** For kits/packs: the individual items bundled inside, shown as a line-item breakdown. */
+  contains?: string[];
   // weapon-specific
   damage?: string; // "1d8"
   damageType?: string;
   weaponProperties?: string[];
+  weaponCategory?: 'simple' | 'martial';
   // armor-specific
   armorClassBase?: number;
   armorClassAddDex?: boolean;
   armorClassMaxDex?: number;
+  armorCategory?: 'light' | 'medium' | 'heavy';
   strengthRequirement?: number;
   stealthDisadvantage?: boolean;
   rarity?: 'Common' | 'Uncommon' | 'Rare' | 'Very Rare' | 'Legendary' | 'Artifact';

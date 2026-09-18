@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useCompendium } from '../store/useCompendium';
 import { getCharacter, saveCharacter } from '../lib/characters';
@@ -16,6 +16,8 @@ import {
 } from '../lib/abilityGeneration';
 import { getFinalAbilityScores, abilityModifier, formatModifier, getSpellcastingClasses, getHitPointsMax } from '../lib/calc';
 import { itemDescription } from '../lib/itemSummary';
+import { isProficientWithItem, getMaxAvailableSpellLevel } from '../lib/eligibility';
+import { fightingStyles, fightingStylesByKey } from '../data/srd/fightingStyles';
 
 const STEPS = ['Basics', 'Race', 'Class', 'Abilities', 'Skills', 'Equipment', 'Spells', 'Review'] as const;
 
@@ -23,17 +25,44 @@ export default function CharacterWizard() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { compendium, loading } = useCompendium();
+  // Captured once on mount (before the /new -> /character/:id/edit redirect
+  // below changes `id`), so the heading stays "Create a New Character"
+  // through that redirect instead of flipping to "Editing ...".
+  const [isNewDraft] = useState(() => !id);
   const [character, setCharacter] = useState<Character | null>(null);
   const [step, setStep] = useState(0);
   const [rolledSet, setRolledSet] = useState<number[]>([]);
+  const draftCreationStarted = useRef(false);
 
   useEffect(() => {
     if (id) {
       getCharacter(id).then((c) => c && setCharacter(c));
     } else {
-      setCharacter(createBlankCharacter(uuid()));
+      // Give a brand-new draft a real, resumable URL right away: save it and
+      // switch to /character/:id/edit under the hood. Without this, the
+      // in-progress character only exists in memory at /new, and a reload
+      // (or a crash) silently starts an entirely new blank draft instead of
+      // recovering this one. Guarded against StrictMode's double-invoke so
+      // we don't create two orphaned drafts for one visit to /new.
+      if (draftCreationStarted.current) return;
+      draftCreationStarted.current = true;
+      const blank = createBlankCharacter(uuid());
+      saveCharacter(blank).then(() => {
+        navigate(`/character/${blank.id}/edit`, { replace: true });
+      });
     }
-  }, [id]);
+  }, [id, navigate]);
+
+  // Belt-and-suspenders autosave: persist shortly after any edit, so progress
+  // survives however the user leaves the page (closing the tab, browser
+  // back/forward, etc.), not just the explicit Next/Back/tab-click handlers.
+  useEffect(() => {
+    if (!character) return;
+    const timer = setTimeout(() => {
+      saveCharacter(character);
+    }, 600);
+    return () => clearTimeout(timer);
+  }, [character]);
 
   function update(patch: Partial<Character>) {
     setCharacter((c) => (c ? { ...c, ...patch } : c));
@@ -42,7 +71,11 @@ export default function CharacterWizard() {
   async function persist(andNavigate?: string) {
     if (!character) return;
     let toSave = character;
-    if (!id && character.hpCurrent <= 0) {
+    // Only worth computing once a real class is chosen — otherwise getHitPointsMax's
+    // "never return less than 1" floor would prematurely lock hpCurrent in at 1
+    // (satisfying the `<= 0` check below) before the player has picked a class at all.
+    const hasRealClass = character.classes.some((c) => c.classKey);
+    if (isNewDraft && hasRealClass && character.hpCurrent <= 0) {
       const max = getHitPointsMax(character, compendium);
       if (max > 0) {
         toSave = { ...character, hpCurrent: max };
@@ -58,6 +91,7 @@ export default function CharacterWizard() {
     setStep((s) => Math.min(s + 1, STEPS.length - 1));
   }
   function goBack() {
+    persist();
     setStep((s) => Math.max(s - 1, 0));
   }
 
@@ -73,14 +107,17 @@ export default function CharacterWizard() {
 
   return (
     <div>
-      <h1 className="mb-1 text-2xl font-bold">{id ? `Editing ${character.name}` : 'Create a New Character'}</h1>
+      <h1 className="mb-1 text-2xl font-bold">{isNewDraft ? 'Create a New Character' : `Editing ${character.name}`}</h1>
       <p className="mb-4 text-sm text-stone-500">Progress is saved automatically as you move between steps.</p>
 
       <div className="mb-6 flex flex-wrap gap-1">
         {STEPS.map((label, i) => (
           <button
             key={label}
-            onClick={() => setStep(i)}
+            onClick={() => {
+              persist();
+              setStep(i);
+            }}
             className={`tab-btn ${i === step ? 'tab-btn-active' : 'tab-btn-inactive'}`}
           >
             {i + 1}. {label}
@@ -278,11 +315,30 @@ function ClassStep({
   const primary = character.classes[0];
   const cls = primary ? compendium.classes[primary.classKey] : undefined;
 
+  function proficienciesFor(classes: Character['classes']) {
+    const weapon = new Set<string>();
+    const armor = new Set<string>();
+    const tools = new Set<string>();
+    for (const cl of classes) {
+      const c = compendium.classes[cl.classKey];
+      if (!c) continue;
+      c.weaponProficiencies.forEach((p) => weapon.add(p));
+      c.armorProficiencies.forEach((p) => armor.add(p));
+      c.toolProficiencies.forEach((p) => tools.add(p));
+    }
+    return { weaponProficiencies: [...weapon], armorProficiencies: [...armor], toolProficiencies: [...tools] };
+  }
+
   function setPrimaryClass(classKey: string) {
     const newCls = compendium.classes[classKey];
+    const nextClasses = [{ classKey, level: primary?.level ?? 1 }, ...character.classes.slice(1)];
+    const profs = proficienciesFor(nextClasses);
     update({
-      classes: [{ classKey, level: primary?.level ?? 1 }, ...character.classes.slice(1)],
+      classes: nextClasses,
       savingThrowProficiencies: newCls?.savingThrowProficiencies ?? character.savingThrowProficiencies,
+      weaponProficiencies: profs.weaponProficiencies,
+      armorProficiencies: profs.armorProficiencies,
+      toolProficiencies: Array.from(new Set([...character.toolProficiencies, ...profs.toolProficiencies])),
     });
   }
 
@@ -291,7 +347,13 @@ function ClassStep({
   }
   function updateClassAt(index: number, patch: Partial<Character['classes'][number]>) {
     const next = character.classes.map((c, i) => (i === index ? { ...c, ...patch } : c));
-    update({ classes: next });
+    const profs = proficienciesFor(next);
+    update({
+      classes: next,
+      weaponProficiencies: profs.weaponProficiencies,
+      armorProficiencies: profs.armorProficiencies,
+      toolProficiencies: Array.from(new Set([...character.toolProficiencies, ...profs.toolProficiencies])),
+    });
   }
   function removeClassAt(index: number) {
     update({ classes: character.classes.filter((_, i) => i !== index) });
@@ -341,6 +403,23 @@ function ClassStep({
               </option>
             ))}
           </select>
+        </div>
+      )}
+
+      {character.classes.some((cl) => compendium.classes[cl.classKey]?.features.some((f) => f.name.includes('Fighting Style') && f.level <= cl.level)) && (
+        <div className="mb-4">
+          <label className="label">Fighting Style</label>
+          <select className="input" value={character.fightingStyle ?? ''} onChange={(e) => update({ fightingStyle: e.target.value || undefined })}>
+            <option value="">Choose…</option>
+            {fightingStyles.map((fs) => (
+              <option key={fs.key} value={fs.key}>
+                {fs.name}
+              </option>
+            ))}
+          </select>
+          {character.fightingStyle && (
+            <p className="mt-1 text-xs text-stone-500">{fightingStylesByKey[character.fightingStyle]?.description}</p>
+          )}
         </div>
       )}
 
@@ -436,7 +515,20 @@ function AbilitiesStep({
       </div>
 
       {method === 'roll' && (
-        <button className="btn-secondary mb-4" onClick={() => setRolledSet(rollAbilitySet())}>
+        <button
+          className="btn-secondary mb-4"
+          onClick={() => {
+            const rolled = rollAbilitySet();
+            setRolledSet(rolled);
+            // Auto-assign the fresh roll in order so a (re)roll is immediately visible;
+            // the per-ability dropdowns below still let you swap them around.
+            const scores = blankAbilityScores(10);
+            ABILITY_KEYS.forEach((key, i) => {
+              scores[key] = rolled[i];
+            });
+            update({ baseAbilityScores: scores });
+          }}
+        >
           {rolledSet.length ? 'Reroll All' : 'Roll Scores'}
         </button>
       )}
@@ -589,6 +681,7 @@ function EquipmentStep({
 }) {
   const cls = compendium.classes[character.classes[0]?.classKey];
   const bg = compendium.backgrounds[character.background];
+  const [showAllItems, setShowAllItems] = useState(false);
 
   function grantStartingEquipment() {
     const names = [...(cls?.startingEquipment ?? []), ...(bg?.equipment ?? [])];
@@ -629,10 +722,17 @@ function EquipmentStep({
       </button>
 
       <div className="mb-4">
-        <label className="label">Add Item from Compendium</label>
+        <div className="flex items-center justify-between">
+          <label className="label">Add Item from Compendium</label>
+          <label className="mb-1 flex items-center gap-1 text-xs text-stone-500">
+            <input type="checkbox" checked={showAllItems} onChange={(e) => setShowAllItems(e.target.checked)} />
+            Show items I'm not proficient with
+          </label>
+        </div>
         <select className="input" value="" onChange={(e) => addItem(e.target.value)}>
           <option value="">Choose an item…</option>
           {Object.values(compendium.items)
+            .filter((item) => showAllItems || isProficientWithItem(character, compendium, item))
             .sort((a, b) => a.name.localeCompare(b.name))
             .map((item) => (
               <option key={item.key} value={item.key}>
@@ -640,6 +740,12 @@ function EquipmentStep({
               </option>
             ))}
         </select>
+        {!showAllItems && (
+          <p className="mt-1 text-xs text-stone-400">
+            Only showing equipment {character.name || 'this character'} is proficient with. Gear, tools, and consumables are always
+            shown.
+          </p>
+        )}
       </div>
 
       <div className="space-y-1">
@@ -667,7 +773,15 @@ function EquipmentStep({
               {item && (
                 <details className="mt-1">
                   <summary className="cursor-pointer text-xs text-stone-500">Description</summary>
-                  <p className="mt-1 text-xs text-stone-500">{itemDescription(item)}</p>
+                  {item.contains ? (
+                    <ul className="mt-1 ml-4 list-disc space-y-0.5 text-xs text-stone-500">
+                      {item.contains.map((c, i) => (
+                        <li key={i}>{c}</li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="mt-1 text-xs text-stone-500">{itemDescription(item)}</p>
+                  )}
                 </details>
               )}
             </div>
@@ -703,13 +817,17 @@ function SpellsStep({
   compendium: ReturnType<typeof useCompendium>['compendium'];
   spellcastingClasses: ReturnType<typeof getSpellcastingClasses>;
 }) {
+  const [showAllLevels, setShowAllLevels] = useState(false);
+
   if (spellcastingClasses.length === 0) {
     return <p className="text-stone-500">This character has no spellcasting classes yet.</p>;
   }
 
   const classKeys = character.classes.map((c) => c.classKey);
+  const { maxLevel } = getMaxAvailableSpellLevel(character, compendium);
   const availableSpells = Object.values(compendium.spells)
     .filter((sp) => sp.classes.some((c) => classKeys.includes(c)))
+    .filter((sp) => showAllLevels || sp.level === 0 || sp.level <= maxLevel)
     .sort((a, b) => a.level - b.level || a.name.localeCompare(b.name));
 
   function toggleKnown(key: string) {
@@ -728,9 +846,20 @@ function SpellsStep({
 
   return (
     <div>
-      <p className="mb-3 text-sm text-stone-500">
-        Select the spells this character knows. Toggle "Prepared" for spells currently readied for casting.
-      </p>
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <p className="text-sm text-stone-500">
+          Select the spells this character knows. Toggle "Prepared" for spells currently readied for casting.
+        </p>
+        <label className="flex items-center gap-1 text-xs text-stone-500">
+          <input type="checkbox" checked={showAllLevels} onChange={(e) => setShowAllLevels(e.target.checked)} />
+          Show spell levels above what I can cast yet
+        </label>
+      </div>
+      {!showAllLevels && (
+        <p className="mb-2 text-xs text-stone-400">
+          Showing cantrips{maxLevel > 0 ? ` and levels 1–${maxLevel}` : ''} — the highest this character can currently cast.
+        </p>
+      )}
       <div className="max-h-[28rem] space-y-1 overflow-y-auto pr-1">
         {availableSpells.map((sp) => {
           const known = character.spellsKnown.includes(sp.key);

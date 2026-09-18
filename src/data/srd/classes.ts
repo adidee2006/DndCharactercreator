@@ -39,7 +39,7 @@ export const classes: Record<string, DndClass> = {
     weaponProficiencies: ['Simple weapons', 'Martial weapons'],
     toolProficiencies: [],
     skillChoices: { count: 2, options: ['animalHandling', 'athletics', 'intimidation', 'nature', 'perception', 'survival'] },
-    startingEquipment: ['greataxe', 'handaxe', 'handaxe', 'javelin', 'javelin', 'javelin', 'javelin', 'explorer’s pack'],
+    startingEquipment: ['greataxe', 'handaxe', 'handaxe', 'javelin', 'javelin', 'javelin', 'javelin', 'explorers-pack'],
     subclassLevel: 3,
     features: [
       feat(1, 'Rage', 'Bonus action to enter a rage: melee damage bonus, resistance to bludgeoning/piercing/slashing damage, advantage on Strength checks/saves.'),
@@ -57,8 +57,26 @@ export const classes: Record<string, DndClass> = {
       feat(20, 'Primal Champion', 'Your Strength and Constitution scores increase by 4, to a maximum of 24.'),
     ],
     subclasses: [
-      { key: 'berserker', name: 'Path of the Berserker', features: [feat(3, 'Frenzy'), feat(6, 'Mindless Rage'), feat(10, 'Intimidating Presence'), feat(14, 'Retaliation')] },
-      { key: 'totem-warrior', name: 'Path of the Totem Warrior', features: [feat(3, 'Totem Spirit'), feat(6, 'Aspect of the Beast'), feat(10, 'Spirit Walker'), feat(14, 'Totemic Attunement')] },
+      {
+        key: 'berserker',
+        name: 'Path of the Berserker',
+        features: [
+          feat(3, 'Frenzy', 'While raging, you can make a single melee weapon attack as a bonus action each turn. When the rage ends, you suffer one level of exhaustion.'),
+          feat(6, 'Mindless Rage', 'You can’t be charmed or frightened while raging. If you were already charmed or frightened, the effect is suspended.'),
+          feat(10, 'Intimidating Presence', 'Use your action to frighten someone within 30 feet (Wisdom save or frightened of you until the end of your next turn).'),
+          feat(14, 'Retaliation', 'When you take damage from a creature within 5 feet, you can use your reaction to make a melee weapon attack against it.'),
+        ],
+      },
+      {
+        key: 'totem-warrior',
+        name: 'Path of the Totem Warrior',
+        features: [
+          feat(3, 'Totem Spirit', 'Choose a totem animal (Bear, Eagle, or Wolf) that grants a passive benefit while raging — e.g. the Bear grants resistance to all damage but psychic while raging.'),
+          feat(6, 'Aspect of the Beast', 'Gain a magical benefit tied to your totem animal, usable even outside of a rage (e.g. the Eagle grants no disadvantage on perception checks in low light and the ability to see 1 mile away clearly).'),
+          feat(10, 'Spirit Walker', 'Cast commune with nature as a ritual, communing with a spirit of the land instead of a natural setting.'),
+          feat(14, 'Totemic Attunement', 'Gain a further magical benefit tied to your totem animal while raging (e.g. the Bear lets you halve an attacker’s speed on a hit as a bonus action).'),
+        ],
+      },
     ],
   },
 
@@ -73,7 +91,7 @@ export const classes: Record<string, DndClass> = {
     weaponProficiencies: ['Simple weapons', 'Hand crossbows', 'Longswords', 'Rapiers', 'Shortswords'],
     toolProficiencies: ['Three musical instruments'],
     skillChoices: { count: 3, options: 'any' },
-    startingEquipment: ['rapier', 'diplomat’s pack', 'lute', 'leather'],
+    startingEquipment: ['rapier', 'diplomats-pack', 'lute', 'leather'],
     subclassLevel: 3,
     features: [
       feat(1, 'Bardic Inspiration', 'Bonus action to give a creature a d6 (scales with level) they can add to one ability check, attack roll, or saving throw.'),
@@ -89,8 +107,26 @@ export const classes: Record<string, DndClass> = {
       feat(20, 'Superior Inspiration', 'When you roll initiative and have no uses of Bardic Inspiration left, you regain one use.'),
     ],
     subclasses: [
-      { key: 'lore', name: 'College of Lore', features: [feat(3, 'Bonus Proficiencies'), feat(3, 'Cutting Words'), feat(6, 'Additional Magical Secrets'), feat(14, 'Peerless Skill')] },
-      { key: 'valor', name: 'College of Valor', features: [feat(3, 'Bonus Proficiencies'), feat(3, 'Combat Inspiration'), feat(6, 'Extra Attack'), feat(14, 'Battle Magic')] },
+      {
+        key: 'lore',
+        name: 'College of Lore',
+        features: [
+          feat(3, 'Bonus Proficiencies', 'Gain proficiency with three skills of your choice.'),
+          feat(3, 'Cutting Words', 'Use your reaction and expend a Bardic Inspiration die to subtract it from an enemy’s attack roll, ability check, or damage roll.'),
+          feat(6, 'Additional Magical Secrets', 'Learn two spells of your choice from any class; they count as bard spells for you.'),
+          feat(14, 'Peerless Skill', 'Add a Bardic Inspiration die to one of your own ability checks.'),
+        ],
+      },
+      {
+        key: 'valor',
+        name: 'College of Valor',
+        features: [
+          feat(3, 'Bonus Proficiencies', 'Gain proficiency with medium armor, shields, and martial weapons.'),
+          feat(3, 'Combat Inspiration', 'A creature with your Bardic Inspiration die can add it to a weapon damage roll or to its AC against one attack.'),
+          feat(6, 'Extra Attack', 'You can attack twice, instead of once, whenever you take the Attack action.'),
+          feat(14, 'Battle Magic', 'When you cast a bard spell, you can make one weapon attack as a bonus action.'),
+        ],
+      },
     ],
     spellcasting: {
       ability: 'cha',
@@ -112,7 +148,7 @@ export const classes: Record<string, DndClass> = {
     weaponProficiencies: ['Simple weapons'],
     toolProficiencies: [],
     skillChoices: { count: 2, options: ['history', 'insight', 'medicine', 'persuasion', 'religion'] },
-    startingEquipment: ['mace', 'scalemail', 'light-crossbow', 'priest’s pack', 'shield', 'holy-symbol'],
+    startingEquipment: ['mace', 'scalemail', 'light-crossbow', 'priests-pack', 'shield', 'holy-symbol'],
     subclassLevel: 1,
     features: [
       feat(1, 'Spellcasting', 'You can cast cleric spells using Wisdom.'),
@@ -122,9 +158,42 @@ export const classes: Record<string, DndClass> = {
       feat(10, 'Divine Intervention', 'You can call on your deity to intervene on your behalf.'),
     ],
     subclasses: [
-      { key: 'life', name: 'Life Domain', features: [feat(1, 'Bonus Proficiency'), feat(1, 'Disciple of Life'), feat(2, 'Channel Divinity: Preserve Life'), feat(6, 'Blessed Healer'), feat(8, 'Divine Strike'), feat(17, 'Supreme Healing')] },
-      { key: 'light', name: 'Light Domain', features: [feat(1, 'Bonus Cantrip'), feat(1, 'Warding Flare'), feat(2, 'Channel Divinity: Radiance of the Dawn'), feat(6, 'Improved Flare'), feat(8, 'Potent Spellcasting'), feat(17, 'Corona of Light')] },
-      { key: 'war', name: 'War Domain', features: [feat(1, 'Bonus Proficiencies'), feat(1, 'War Priest'), feat(2, 'Channel Divinity: Guided Strike'), feat(6, 'Channel Divinity: War God’s Blessing'), feat(8, 'Divine Strike'), feat(17, 'Avatar of Battle')] },
+      {
+        key: 'life',
+        name: 'Life Domain',
+        features: [
+          feat(1, 'Bonus Proficiency', 'Gain proficiency with heavy armor.'),
+          feat(1, 'Disciple of Life', 'Whenever you cast a spell that restores hit points, the target regains additional hit points equal to 2 + the spell’s level.'),
+          feat(2, 'Channel Divinity: Preserve Life', 'Expend a Channel Divinity to restore a number of hit points equal to 5 × your cleric level, divided among creatures within 30 feet (none can be healed above half their max).'),
+          feat(6, 'Blessed Healer', 'When you cast a spell that restores hit points to another creature, you also regain hit points equal to 2 + the spell’s level.'),
+          feat(8, 'Divine Strike', 'Once per turn, your weapon attacks deal an extra 1d8 radiant damage (2d8 at 14th level).'),
+          feat(17, 'Supreme Healing', 'When you would normally roll dice to restore hit points, use the highest possible result instead.'),
+        ],
+      },
+      {
+        key: 'light',
+        name: 'Light Domain',
+        features: [
+          feat(1, 'Bonus Cantrip', 'Learn the light cantrip if you don’t already know it; it doesn’t count against your number of cantrips known.'),
+          feat(1, 'Warding Flare', 'When a creature attacks you, use your reaction to impose disadvantage on the attack roll (limited uses per long rest).'),
+          feat(2, 'Channel Divinity: Radiance of the Dawn', 'Expend a Channel Divinity to dispel magical darkness and deal radiant damage to hostile creatures within 30 feet.'),
+          feat(6, 'Improved Flare', 'You can also use Warding Flare when a creature you can see within 30 feet attacks a creature other than you.'),
+          feat(8, 'Potent Spellcasting', 'Add your Wisdom modifier to the damage you deal with any cleric cantrip.'),
+          feat(17, 'Corona of Light', 'Use your action to radiate bright light in a 60-foot radius for 1 minute; enemies in the bright light have disadvantage on saves against your radiant/fire spells.'),
+        ],
+      },
+      {
+        key: 'war',
+        name: 'War Domain',
+        features: [
+          feat(1, 'Bonus Proficiencies', 'Gain proficiency with martial weapons and heavy armor.'),
+          feat(1, 'War Priest', 'When you take the Attack action, you can make one weapon attack as a bonus action, a number of times per day equal to your Wisdom modifier.'),
+          feat(2, 'Channel Divinity: Guided Strike', 'Expend a Channel Divinity to add +10 to an attack roll you just made.'),
+          feat(6, 'Channel Divinity: War God’s Blessing', 'Expend a Channel Divinity to add +10 to an ally’s attack roll made within 30 feet of you.'),
+          feat(8, 'Divine Strike', 'Once per turn, your weapon attacks deal an extra 1d8 damage of your deity’s associated type (2d8 at 14th level).'),
+          feat(17, 'Avatar of Battle', 'Gain resistance to bludgeoning, piercing, and slashing damage from nonmagical weapons.'),
+        ],
+      },
     ],
     spellcasting: {
       ability: 'wis',
@@ -146,7 +215,7 @@ export const classes: Record<string, DndClass> = {
     weaponProficiencies: ['Clubs', 'Daggers', 'Darts', 'Javelins', 'Maces', 'Quarterstaffs', 'Scimitars', 'Sickles', 'Slings', 'Spears'],
     toolProficiencies: ['Herbalism kit'],
     skillChoices: { count: 2, options: ['arcana', 'animalHandling', 'insight', 'medicine', 'nature', 'perception', 'religion', 'survival'] },
-    startingEquipment: ['leather', 'scimitar', 'druidic-focus', 'explorer’s pack'],
+    startingEquipment: ['leather', 'scimitar', 'druidic-focus', 'explorers-pack'],
     subclassLevel: 2,
     features: [
       feat(1, 'Druidic', 'You know Druidic, the secret language of druids.'),
@@ -159,8 +228,28 @@ export const classes: Record<string, DndClass> = {
       feat(20, 'Archdruid', 'You can use Wild Shape an unlimited number of times.'),
     ],
     subclasses: [
-      { key: 'land', name: 'Circle of the Land', features: [feat(2, 'Bonus Cantrip'), feat(2, 'Natural Recovery'), feat(6, 'Land’s Stride'), feat(10, 'Nature’s Ward'), feat(14, 'Nature’s Sanctuary')] },
-      { key: 'moon', name: 'Circle of the Moon', features: [feat(2, 'Combat Wild Shape'), feat(2, 'Circle Forms'), feat(6, 'Primal Strike'), feat(10, 'Elemental Wild Shape'), feat(14, 'Thousand Forms')] },
+      {
+        key: 'land',
+        name: 'Circle of the Land',
+        features: [
+          feat(2, 'Bonus Cantrip', 'Learn one additional druid cantrip of your choice.'),
+          feat(2, 'Natural Recovery', 'Once per day on a short rest, recover expended spell slots with a combined level up to half your druid level (rounded up, none 6th level or higher).'),
+          feat(6, 'Land’s Stride', 'Moving through nonmagical difficult terrain costs no extra movement, and you can pass through nonmagical plants without being slowed or harmed by them.'),
+          feat(10, 'Nature’s Ward', 'You can’t be charmed or frightened by elementals or fey, and you are immune to poison and disease.'),
+          feat(14, 'Nature’s Sanctuary', 'Beasts and plant creatures must make a Wisdom save to attack you, and if they fail, they must choose a different target or lose the attack.'),
+        ],
+      },
+      {
+        key: 'moon',
+        name: 'Circle of the Moon',
+        features: [
+          feat(2, 'Combat Wild Shape', 'Use Wild Shape as a bonus action, and can expend a spell slot while transformed to regain 1d8 hit points per slot level.'),
+          feat(2, 'Circle Forms', 'Use Wild Shape to transform into a beast with a challenge rating as high as 1 (instead of the normal limit).'),
+          feat(6, 'Primal Strike', 'Your attacks in beast form count as magical for the purpose of overcoming resistance and immunity to nonmagical attacks.'),
+          feat(10, 'Elemental Wild Shape', 'Expend two Wild Shape uses at once to transform into an air, earth, fire, or water elemental.'),
+          feat(14, 'Thousand Forms', 'Cast the alter self spell at will, without expending a spell slot.'),
+        ],
+      },
     ],
     spellcasting: {
       ability: 'wis',
@@ -182,7 +271,7 @@ export const classes: Record<string, DndClass> = {
     weaponProficiencies: ['Simple weapons', 'Martial weapons'],
     toolProficiencies: [],
     skillChoices: { count: 2, options: ['acrobatics', 'animalHandling', 'athletics', 'history', 'insight', 'intimidation', 'perception', 'survival'] },
-    startingEquipment: ['chainmail', 'longsword', 'shield', 'light-crossbow', 'dungeoneer’s pack'],
+    startingEquipment: ['chainmail', 'longsword', 'shield', 'light-crossbow', 'dungeoneers-pack'],
     subclassLevel: 3,
     features: [
       feat(1, 'Fighting Style', 'Adopt a particular style of fighting as your specialty (Archery, Defense, Dueling, etc).'),
@@ -195,9 +284,41 @@ export const classes: Record<string, DndClass> = {
       feat(20, 'Extra Attack (3)', 'You can attack four times whenever you take the Attack action.'),
     ],
     subclasses: [
-      { key: 'champion', name: 'Champion', features: [feat(3, 'Improved Critical'), feat(7, 'Remarkable Athlete'), feat(10, 'Additional Fighting Style'), feat(15, 'Superior Critical'), feat(18, 'Survivor')] },
-      { key: 'battle-master', name: 'Battle Master', features: [feat(3, 'Combat Superiority'), feat(3, 'Student of War'), feat(7, 'Know Your Enemy'), feat(10, 'Improved Combat Superiority'), feat(15, 'Relentless'), feat(18, 'Improved Combat Superiority')] },
-      { key: 'eldritch-knight', name: 'Eldritch Knight', features: [feat(3, 'Spellcasting'), feat(3, 'Weapon Bond'), feat(7, 'War Magic'), feat(10, 'Eldritch Strike'), feat(15, 'Arcane Charge'), feat(18, 'Improved War Magic')] },
+      {
+        key: 'champion',
+        name: 'Champion',
+        features: [
+          feat(3, 'Improved Critical', 'Your weapon attacks score a critical hit on a roll of 19 or 20.'),
+          feat(7, 'Remarkable Athlete', 'Add half your proficiency bonus to Strength/Dexterity/Constitution checks that don’t already use it, and improve your running long jump distance.'),
+          feat(10, 'Additional Fighting Style', 'Choose a second Fighting Style option.'),
+          feat(15, 'Superior Critical', 'Your weapon attacks score a critical hit on a roll of 18–20.'),
+          feat(18, 'Survivor', 'At the start of each of your turns, regain hit points equal to 5 + your Constitution modifier if you have no more than half your hit points left.'),
+        ],
+      },
+      {
+        key: 'battle-master',
+        name: 'Battle Master',
+        features: [
+          feat(3, 'Combat Superiority', 'Learn maneuvers fueled by superiority dice (d8s) — e.g. Trip Attack, Riposte, Precision Attack — to add extra effects and damage to your attacks.'),
+          feat(3, 'Student of War', 'Gain proficiency with one type of artisan’s tools.'),
+          feat(7, 'Know Your Enemy', 'Study a creature for a minute to learn how it compares to you in several categories, such as whether it is stronger or weaker.'),
+          feat(10, 'Improved Combat Superiority', 'Your superiority dice become d10s.'),
+          feat(15, 'Relentless', 'When you roll initiative and have no superiority dice left, you regain one.'),
+          feat(18, 'Improved Combat Superiority', 'Your superiority dice become d12s.'),
+        ],
+      },
+      {
+        key: 'eldritch-knight',
+        name: 'Eldritch Knight',
+        features: [
+          feat(3, 'Spellcasting', 'Learn to cast wizard spells (primarily abjuration and evocation), using Intelligence as your spellcasting ability.'),
+          feat(3, 'Weapon Bond', 'Magically bond with up to two weapons, letting you summon a bonded weapon to your hand as a bonus action.'),
+          feat(7, 'War Magic', 'When you use your action to cast a cantrip, you can make one weapon attack as a bonus action.'),
+          feat(10, 'Eldritch Strike', 'When you hit a creature with a weapon attack, it has disadvantage on its next save against a spell you cast before the end of your next turn.'),
+          feat(15, 'Arcane Charge', 'When you use Action Surge, you can teleport up to 30 feet as part of that action.'),
+          feat(18, 'Improved War Magic', 'You can use War Magic when you cast any wizard spell, not just a cantrip.'),
+        ],
+      },
     ],
   },
 
@@ -212,7 +333,7 @@ export const classes: Record<string, DndClass> = {
     weaponProficiencies: ['Simple weapons', 'Shortswords'],
     toolProficiencies: ['One artisan’s tool or musical instrument'],
     skillChoices: { count: 2, options: ['acrobatics', 'athletics', 'history', 'insight', 'religion', 'stealth'] },
-    startingEquipment: ['shortsword', 'dungeoneer’s pack', '10 darts'],
+    startingEquipment: ['shortsword', 'dungeoneers-pack', '10 darts'],
     subclassLevel: 3,
     features: [
       feat(1, 'Unarmored Defense', 'While not wearing armor or shield, AC = 10 + Dex modifier + Wis modifier.'),
@@ -236,8 +357,26 @@ export const classes: Record<string, DndClass> = {
       feat(20, 'Perfect Self', 'When you roll initiative with no ki points, you regain 4 ki points.'),
     ],
     subclasses: [
-      { key: 'open-hand', name: 'Way of the Open Hand', features: [feat(3, 'Open Hand Technique'), feat(6, 'Wholeness of Body'), feat(11, 'Tranquility'), feat(17, 'Quivering Palm')] },
-      { key: 'shadow', name: 'Way of Shadow', features: [feat(3, 'Shadow Arts'), feat(6, 'Shadow Step'), feat(11, 'Cloak of Shadows'), feat(17, 'Opportunist')] },
+      {
+        key: 'open-hand',
+        name: 'Way of the Open Hand',
+        features: [
+          feat(3, 'Open Hand Technique', 'When you hit with Flurry of Blows, choose one: the target must save or be knocked prone, pushed 15 feet, or can’t take reactions until your next turn.'),
+          feat(6, 'Wholeness of Body', 'Use your action to regain hit points equal to three times your monk level (once per long rest).'),
+          feat(11, 'Tranquility', 'At the end of a long rest, you gain the effect of a sanctuary spell until your next long rest.'),
+          feat(17, 'Quivering Palm', 'Spend 3 ki to set up lethal vibrations in a creature you hit; later, use an action to force a Constitution save or the target drops to 0 hit points (or takes 10d10 necrotic damage on a success).'),
+        ],
+      },
+      {
+        key: 'shadow',
+        name: 'Way of Shadow',
+        features: [
+          feat(3, 'Shadow Arts', 'Spend 2 ki to cast darkness, darkvision, pass without trace, or silence without material components.'),
+          feat(6, 'Shadow Step', 'When in dim light or darkness, teleport up to 60 feet to an unoccupied space you can see, and gain advantage on your next melee attack that turn.'),
+          feat(11, 'Cloak of Shadows', 'When in dim light or darkness, use your action to become invisible until you take an action, a reaction, or are in bright light.'),
+          feat(17, 'Opportunist', 'When a creature within 5 feet is hit by an attack from someone other than you, use your reaction to make a melee attack against that creature.'),
+        ],
+      },
     ],
   },
 
@@ -252,7 +391,7 @@ export const classes: Record<string, DndClass> = {
     weaponProficiencies: ['Simple weapons', 'Martial weapons'],
     toolProficiencies: [],
     skillChoices: { count: 2, options: ['athletics', 'insight', 'intimidation', 'medicine', 'persuasion', 'religion'] },
-    startingEquipment: ['chainmail', 'longsword', 'shield', 'priest’s pack', '5 javelins'],
+    startingEquipment: ['chainmail', 'longsword', 'shield', 'priests-pack', '5 javelins'],
     subclassLevel: 3,
     features: [
       feat(1, 'Divine Sense', 'Detect the presence of celestials, fiends, and undead within 60 feet.'),
@@ -269,9 +408,39 @@ export const classes: Record<string, DndClass> = {
       feat(14, 'Cleansing Touch', 'Use your action to end one spell on yourself or a willing creature you touch.'),
     ],
     subclasses: [
-      { key: 'devotion', name: 'Oath of Devotion', features: [feat(3, 'Channel Divinity: Sacred Weapon'), feat(3, 'Channel Divinity: Turn the Unholy'), feat(7, 'Aura of Devotion'), feat(15, 'Purity of Spirit'), feat(20, 'Holy Nimbus')] },
-      { key: 'ancients', name: 'Oath of the Ancients', features: [feat(3, 'Channel Divinity: Nature’s Wrath'), feat(3, 'Channel Divinity: Turn the Faithless'), feat(7, 'Aura of Warding'), feat(15, 'Undying Sentinel'), feat(20, 'Elder Champion')] },
-      { key: 'vengeance', name: 'Oath of Vengeance', features: [feat(3, 'Channel Divinity: Abjure Enemy'), feat(3, 'Channel Divinity: Vow of Enmity'), feat(7, 'Relentless Avenger'), feat(15, 'Soul of Vengeance'), feat(20, 'Avenging Angel')] },
+      {
+        key: 'devotion',
+        name: 'Oath of Devotion',
+        features: [
+          feat(3, 'Channel Divinity: Sacred Weapon', 'Expend a Channel Divinity to add your Charisma modifier to attack rolls with one weapon for 1 minute, and the weapon emits bright light.'),
+          feat(3, 'Channel Divinity: Turn the Unholy', 'Expend a Channel Divinity to force fiends and undead within 30 feet to make a Wisdom save or be turned for 1 minute.'),
+          feat(7, 'Aura of Devotion', 'You and friendly creatures within 10 feet (30 feet at 18th level) can’t be charmed while you are conscious.'),
+          feat(15, 'Purity of Spirit', 'You are always under the effect of a protection from evil and good spell.'),
+          feat(20, 'Holy Nimbus', 'Emanate sunlight that deals 10 radiant damage to hostile creatures that start their turn within 30 feet, gives you advantage on saves against spells cast by fiends/undead, and sheds bright light.'),
+        ],
+      },
+      {
+        key: 'ancients',
+        name: 'Oath of the Ancients',
+        features: [
+          feat(3, 'Channel Divinity: Nature’s Wrath', 'Expend a Channel Divinity to summon spectral vines that restrain a creature within 10 feet unless it succeeds on a Strength or Dexterity save.'),
+          feat(3, 'Channel Divinity: Turn the Faithless', 'Expend a Channel Divinity to force fey and fiends within 30 feet to make a Wisdom save or be turned for 1 minute.'),
+          feat(7, 'Aura of Warding', 'You and friendly creatures within 10 feet (30 feet at 18th level) have resistance to damage from spells.'),
+          feat(15, 'Undying Sentinel', 'When reduced to 0 hit points and not killed outright, you can drop to 1 hit point instead (once per long rest); you also no longer suffer the frailty of old age.'),
+          feat(20, 'Elder Champion', 'Transform for 1 minute into an ancient force of nature: regain 10 hit points each turn, cast spells as a bonus action, and force enemies within 10 feet to have disadvantage on saves against your paladin spells.'),
+        ],
+      },
+      {
+        key: 'vengeance',
+        name: 'Oath of Vengeance',
+        features: [
+          feat(3, 'Channel Divinity: Abjure Enemy', 'Expend a Channel Divinity to force a creature within 60 feet to make a Wisdom save or be frightened and have its speed reduced to 0.'),
+          feat(3, 'Channel Divinity: Vow of Enmity', 'Expend a Channel Divinity as a bonus action to gain advantage on attack rolls against one creature within 10 feet for 1 minute.'),
+          feat(7, 'Relentless Avenger', 'When you hit a creature with an opportunity attack, you can move up to half your speed as part of the same reaction.'),
+          feat(15, 'Soul of Vengeance', 'When a creature under your Vow of Enmity makes an attack, you can use your reaction to make a melee weapon attack against it.'),
+          feat(20, 'Avenging Angel', 'Transform for 1 hour, sprouting wings that grant a 60-foot flying speed; enemies within 30 feet who start their turn there must save or be frightened of you.'),
+        ],
+      },
     ],
     spellcasting: {
       ability: 'cha',
@@ -292,7 +461,7 @@ export const classes: Record<string, DndClass> = {
     weaponProficiencies: ['Simple weapons', 'Martial weapons'],
     toolProficiencies: [],
     skillChoices: { count: 3, options: ['animalHandling', 'athletics', 'insight', 'investigation', 'nature', 'perception', 'stealth', 'survival'] },
-    startingEquipment: ['scalemail', 'shortsword', 'shortsword', 'longbow', 'dungeoneer’s pack'],
+    startingEquipment: ['scalemail', 'shortsword', 'shortsword', 'longbow', 'dungeoneers-pack'],
     subclassLevel: 3,
     features: [
       feat(1, 'Favored Enemy', 'You have significant experience with a type of enemy: advantage on tracking and recalling information.'),
@@ -310,8 +479,26 @@ export const classes: Record<string, DndClass> = {
       feat(20, 'Foe Slayer', 'Add your Wisdom modifier to an attack roll or damage roll against a favored enemy once per turn.'),
     ],
     subclasses: [
-      { key: 'hunter', name: 'Hunter', features: [feat(3, 'Hunter’s Prey'), feat(7, 'Defensive Tactics'), feat(11, 'Multiattack'), feat(15, 'Superior Hunter’s Defense')] },
-      { key: 'beast-master', name: 'Beast Master', features: [feat(3, 'Ranger’s Companion'), feat(7, 'Exceptional Training'), feat(11, 'Bestial Fury'), feat(15, 'Share Spells')] },
+      {
+        key: 'hunter',
+        name: 'Hunter',
+        features: [
+          feat(3, 'Hunter’s Prey', 'Choose a combat option: Colossus Slayer (extra 1d8 damage once per turn to a wounded target), Giant Killer, or Horde Breaker.'),
+          feat(7, 'Defensive Tactics', 'Choose a defensive option: Escape the Horde, Multiattack Defense, or Steel Will.'),
+          feat(11, 'Multiattack', 'Choose Volley (attack every creature in a 10-foot radius within range) or Whirlwind Attack (attack every creature within 5 feet).'),
+          feat(15, 'Superior Hunter’s Defense', 'Choose Evasion, Stand Against the Tide, or Uncanny Dodge.'),
+        ],
+      },
+      {
+        key: 'beast-master',
+        name: 'Beast Master',
+        features: [
+          feat(3, 'Ranger’s Companion', 'Gain a beast companion that fights alongside you and obeys your commands.'),
+          feat(7, 'Exceptional Training', 'Your companion can take the Dash, Disengage, Dodge, or Help action on your turn instead of attacking, and its attacks count as magical.'),
+          feat(11, 'Bestial Fury', 'Your companion can make two attacks when you command it to attack.'),
+          feat(15, 'Share Spells', 'When you cast a spell targeting yourself, you can also affect your companion if it’s within 30 feet.'),
+        ],
+      },
     ],
     spellcasting: {
       ability: 'wis',
@@ -332,7 +519,7 @@ export const classes: Record<string, DndClass> = {
     weaponProficiencies: ['Simple weapons', 'Hand crossbows', 'Longswords', 'Rapiers', 'Shortswords'],
     toolProficiencies: ["Thieves' tools"],
     skillChoices: { count: 4, options: ['acrobatics', 'athletics', 'deception', 'insight', 'intimidation', 'investigation', 'perception', 'performance', 'persuasion', 'sleightOfHand', 'stealth'] },
-    startingEquipment: ['rapier', 'shortbow', 'burglar’s pack', 'leather', 'dagger', 'dagger', 'thieves-tools'],
+    startingEquipment: ['rapier', 'shortbow', 'burglars-pack', 'leather', 'dagger', 'dagger', 'thieves-tools'],
     subclassLevel: 3,
     features: [
       feat(1, 'Expertise', 'Choose two skill proficiencies (or one skill and thieves’ tools); double your proficiency bonus for them.'),
@@ -349,9 +536,39 @@ export const classes: Record<string, DndClass> = {
       feat(20, 'Stroke of Luck', 'Turn a missed attack into a hit, or a failed ability check into a 20, once per short/long rest.'),
     ],
     subclasses: [
-      { key: 'thief', name: 'Thief', features: [feat(3, 'Fast Hands'), feat(3, 'Second-Story Work'), feat(9, 'Supreme Sneak'), feat(13, 'Use Magic Device'), feat(17, 'Thief’s Reflexes')] },
-      { key: 'assassin', name: 'Assassin', features: [feat(3, 'Bonus Proficiencies'), feat(3, 'Assassinate'), feat(9, 'Infiltration Expertise'), feat(13, 'Impostor'), feat(17, 'Death Strike')] },
-      { key: 'arcane-trickster', name: 'Arcane Trickster', features: [feat(3, 'Spellcasting'), feat(3, 'Mage Hand Legerdemain'), feat(9, 'Magical Ambush'), feat(13, 'Versatile Trickster'), feat(17, 'Spell Thief')] },
+      {
+        key: 'thief',
+        name: 'Thief',
+        features: [
+          feat(3, 'Fast Hands', 'Use the bonus action granted by Cunning Action to make a Sleight of Hand check, use thieves’ tools, or take the Use an Object action.'),
+          feat(3, 'Second-Story Work', 'Climbing no longer costs extra movement, and your running jump distance increases by your Dexterity modifier in feet.'),
+          feat(9, 'Supreme Sneak', 'Advantage on Stealth checks if you move no more than half your speed on the same turn.'),
+          feat(13, 'Use Magic Device', 'Ignore all class, race, and level requirements on the use of magic items.'),
+          feat(17, 'Thief’s Reflexes', 'Take two turns during the first round of combat: one at your normal initiative and one at initiative minus 10.'),
+        ],
+      },
+      {
+        key: 'assassin',
+        name: 'Assassin',
+        features: [
+          feat(3, 'Bonus Proficiencies', 'Gain proficiency with the disguise kit and poisoner’s kit.'),
+          feat(3, 'Assassinate', 'You have advantage on attack rolls against any creature that hasn’t acted yet in combat, and any hit you score against a surprised creature is a critical hit.'),
+          feat(9, 'Infiltration Expertise', 'Spend 7 days and 25 gp to establish a false identity, complete with documentation and contacts.'),
+          feat(13, 'Impostor', 'Perfectly mimic another person’s speech, writing, and behavior after studying them closely.'),
+          feat(17, 'Death Strike', 'When you attack a surprised creature and hit, it must make a Constitution save or take double damage from the attack.'),
+        ],
+      },
+      {
+        key: 'arcane-trickster',
+        name: 'Arcane Trickster',
+        features: [
+          feat(3, 'Spellcasting', 'Learn to cast wizard spells (primarily enchantment and illusion), using Intelligence as your spellcasting ability.'),
+          feat(3, 'Mage Hand Legerdemain', 'Your mage hand cantrip becomes invisible, and you can use it to stow/retrieve small items, pick locks, and disarm traps at range.'),
+          feat(9, 'Magical Ambush', 'If you are hidden from a creature when you cast a spell on it, it has disadvantage on any save against the spell.'),
+          feat(13, 'Versatile Trickster', 'Use your mage hand to distract a target, giving you advantage on attack rolls against it this turn.'),
+          feat(17, 'Spell Thief', 'When a creature you can see casts a spell targeting you, you can use your reaction to force a save; on a failure, the spell has no effect on you and you steal it, able to cast it once yourself.'),
+        ],
+      },
     ],
   },
 
@@ -366,7 +583,7 @@ export const classes: Record<string, DndClass> = {
     weaponProficiencies: ['Daggers', 'Darts', 'Slings', 'Quarterstaffs', 'Light crossbows'],
     toolProficiencies: [],
     skillChoices: { count: 2, options: ['arcana', 'deception', 'insight', 'intimidation', 'persuasion', 'religion'] },
-    startingEquipment: ['light-crossbow', 'component-pouch', 'dungeoneer’s pack', 'dagger', 'dagger'],
+    startingEquipment: ['light-crossbow', 'component-pouch', 'dungeoneers-pack', 'dagger', 'dagger'],
     subclassLevel: 1,
     features: [
       feat(1, 'Spellcasting', 'You can cast sorcerer spells using Charisma.'),
@@ -378,8 +595,28 @@ export const classes: Record<string, DndClass> = {
       feat(20, 'Sorcerous Restoration', 'Regain 4 expended sorcery points whenever you finish a short rest.'),
     ],
     subclasses: [
-      { key: 'draconic', name: 'Draconic Bloodline', features: [feat(1, 'Dragon Ancestor'), feat(1, 'Draconic Resilience'), feat(6, 'Elemental Affinity'), feat(14, 'Dragon Wings'), feat(18, 'Draconic Presence')] },
-      { key: 'wild-magic', name: 'Wild Magic', features: [feat(1, 'Wild Magic Surge'), feat(1, 'Tides of Chaos'), feat(6, 'Bend Luck'), feat(14, 'Controlled Chaos'), feat(18, 'Spell Bombardment')] },
+      {
+        key: 'draconic',
+        name: 'Draconic Bloodline',
+        features: [
+          feat(1, 'Dragon Ancestor', 'Choose a dragon type; you can speak, read, and write Draconic, and creatures find you charming or intimidating based on that dragon’s reputation.'),
+          feat(1, 'Draconic Resilience', 'Your hit point maximum increases by 1 per sorcerer level, and your AC becomes 13 + Dex modifier when not wearing armor.'),
+          feat(6, 'Elemental Affinity', 'When you cast a spell dealing damage of your draconic type, add your Charisma modifier to one damage roll; you can also spend 1 sorcery point for resistance to that damage type for 1 hour.'),
+          feat(14, 'Dragon Wings', 'Sprout dragon wings as a bonus action, granting a flying speed equal to your current speed.'),
+          feat(18, 'Draconic Presence', 'Spend 5 sorcery points to exude an aura of awe or fear (your choice) in a 60-foot radius for 1 minute; enemies must save or be charmed/frightened.'),
+        ],
+      },
+      {
+        key: 'wild-magic',
+        name: 'Wild Magic',
+        features: [
+          feat(1, 'Wild Magic Surge', 'After you cast a sorcerer spell of 1st level or higher, the DM can have you roll on the Wild Magic Surge table to trigger a random magical effect.'),
+          feat(1, 'Tides of Chaos', 'Gain advantage on one attack roll, ability check, or saving throw, at the cost of risking another Wild Magic Surge (recharges on a long rest).'),
+          feat(6, 'Bend Luck', 'Spend 2 sorcery points to add or subtract 1d4 from another creature’s attack roll, ability check, or saving throw.'),
+          feat(14, 'Controlled Chaos', 'Roll twice on the Wild Magic Surge table and choose which result to apply.'),
+          feat(18, 'Spell Bombardment', 'When you roll damage for a spell and roll the maximum on a die, roll that die again and add it to the damage.'),
+        ],
+      },
     ],
     spellcasting: {
       ability: 'cha',
@@ -401,7 +638,7 @@ export const classes: Record<string, DndClass> = {
     weaponProficiencies: ['Simple weapons'],
     toolProficiencies: [],
     skillChoices: { count: 2, options: ['arcana', 'deception', 'history', 'intimidation', 'investigation', 'nature', 'religion'] },
-    startingEquipment: ['light-crossbow', 'component-pouch', 'scholar’s pack', 'leather', 'dagger', 'dagger'],
+    startingEquipment: ['light-crossbow', 'component-pouch', 'scholars-pack', 'leather', 'dagger', 'dagger'],
     subclassLevel: 1,
     features: [
       feat(1, 'Otherworldly Patron', 'Choose a subclass that grants features at 1st, 6th, 10th, and 14th level.'),
@@ -415,9 +652,36 @@ export const classes: Record<string, DndClass> = {
       feat(20, 'Eldritch Master', 'Regain all expended pact magic spell slots by spending 1 minute entreating your patron.'),
     ],
     subclasses: [
-      { key: 'fiend', name: 'The Fiend', features: [feat(1, 'Dark One’s Blessing'), feat(6, 'Dark One’s Own Luck'), feat(10, 'Fiendish Resilience'), feat(14, 'Hurl Through Hell')] },
-      { key: 'archfey', name: 'The Archfey', features: [feat(1, 'Fey Presence'), feat(6, 'Misty Escape'), feat(10, 'Beguiling Defenses'), feat(14, 'Dark Delirium')] },
-      { key: 'great-old-one', name: 'The Great Old One', features: [feat(1, 'Awakened Mind'), feat(6, 'Entropic Ward'), feat(10, 'Thought Shield'), feat(14, 'Create Thrall')] },
+      {
+        key: 'fiend',
+        name: 'The Fiend',
+        features: [
+          feat(1, 'Dark One’s Blessing', 'When you reduce a hostile creature to 0 hit points, gain temporary hit points equal to your Charisma modifier + your warlock level.'),
+          feat(6, 'Dark One’s Own Luck', 'Add a d10 to one ability check or saving throw you make (limited uses per rest).'),
+          feat(10, 'Fiendish Resilience', 'Choose a damage type each short/long rest; you have resistance to it, unless it’s from a magic weapon.'),
+          feat(14, 'Hurl Through Hell', 'When you hit a creature with an attack, banish it to the lower planes for a horrifying instant, dealing 10d10 psychic damage (once per long rest).'),
+        ],
+      },
+      {
+        key: 'archfey',
+        name: 'The Archfey',
+        features: [
+          feat(1, 'Fey Presence', 'Force each creature in a 10-foot cube to make a Wisdom save or be charmed or frightened until the end of your next turn.'),
+          feat(6, 'Misty Escape', 'When you take damage, use your reaction to turn invisible and teleport up to 60 feet away.'),
+          feat(10, 'Beguiling Defenses', 'You are immune to being charmed, and can turn the charm effect back on a creature that tries to charm you.'),
+          feat(14, 'Dark Delirium', 'Incapacitate a creature with illusion/phantasm, isolating it in a hallucinatory dreamscape for up to 1 minute.'),
+        ],
+      },
+      {
+        key: 'great-old-one',
+        name: 'The Great Old One',
+        features: [
+          feat(1, 'Awakened Mind', 'Telepathically communicate with any creature within 30 feet that can understand a language.'),
+          feat(6, 'Entropic Ward', 'When a creature attacks you, use your reaction to impose disadvantage on the roll; if it misses, your next attack against it has advantage.'),
+          feat(10, 'Thought Shield', 'Your thoughts can’t be read by telepathy unless you allow it, you have resistance to psychic damage, and any creature dealing psychic damage to you takes equal damage back.'),
+          feat(14, 'Create Thrall', 'Use your action to charm an incapacitated humanoid indefinitely, and communicate with it telepathically.'),
+        ],
+      },
     ],
     spellcasting: {
       ability: 'cha',
@@ -439,7 +703,7 @@ export const classes: Record<string, DndClass> = {
     weaponProficiencies: ['Daggers', 'Darts', 'Slings', 'Quarterstaffs', 'Light crossbows'],
     toolProficiencies: [],
     skillChoices: { count: 2, options: ['arcana', 'history', 'insight', 'investigation', 'medicine', 'religion'] },
-    startingEquipment: ['quarterstaff', 'component-pouch', 'scholar’s pack', 'spellbook'],
+    startingEquipment: ['quarterstaff', 'component-pouch', 'scholars-pack', 'spellbook'],
     subclassLevel: 2,
     features: [
       feat(1, 'Spellcasting', 'You can cast wizard spells using Intelligence, prepared from your spellbook.'),
@@ -449,9 +713,39 @@ export const classes: Record<string, DndClass> = {
       feat(20, 'Signature Spells', 'Choose two 3rd-level spells you always have prepared and can cast once each without a slot per short/long rest.'),
     ],
     subclasses: [
-      { key: 'evocation', name: 'School of Evocation', features: [feat(2, 'Evocation Savant'), feat(2, 'Sculpt Spells'), feat(6, 'Potent Cantrip'), feat(10, 'Empowered Evocation'), feat(14, 'Overchannel')] },
-      { key: 'abjuration', name: 'School of Abjuration', features: [feat(2, 'Abjuration Savant'), feat(2, 'Arcane Ward'), feat(6, 'Projected Ward'), feat(10, 'Improved Abjuration'), feat(14, 'Spell Resistance')] },
-      { key: 'divination', name: 'School of Divination', features: [feat(2, 'Divination Savant'), feat(2, 'Portent'), feat(6, 'Expert Divination'), feat(10, 'The Third Eye'), feat(14, 'Greater Portent')] },
+      {
+        key: 'evocation',
+        name: 'School of Evocation',
+        features: [
+          feat(2, 'Evocation Savant', 'The gold and time you must spend to copy an evocation spell into your spellbook is halved.'),
+          feat(2, 'Sculpt Spells', 'Choose allies caught in your evocation spells to automatically succeed their saves and take no damage.'),
+          feat(6, 'Potent Cantrip', 'When a creature succeeds on a save against your cantrip, it still takes half damage (if the cantrip deals damage).'),
+          feat(10, 'Empowered Evocation', 'Add your Intelligence modifier to the damage of one evocation spell you cast.'),
+          feat(14, 'Overchannel', 'Deal maximum damage with a 1st–5th level evocation spell instead of rolling, at the risk of taking necrotic damage yourself on repeated uses.'),
+        ],
+      },
+      {
+        key: 'abjuration',
+        name: 'School of Abjuration',
+        features: [
+          feat(2, 'Abjuration Savant', 'The gold and time you must spend to copy an abjuration spell into your spellbook is halved.'),
+          feat(2, 'Arcane Ward', 'Casting an abjuration spell creates a shield of magical energy (hit points = 2 × wizard level + Int modifier) that absorbs damage until depleted.'),
+          feat(6, 'Projected Ward', 'When a creature you can see takes damage, use your reaction to absorb some of it into your Arcane Ward.'),
+          feat(10, 'Improved Abjuration', 'Add your proficiency bonus to any ability check made as part of an abjuration spell you cast.'),
+          feat(14, 'Spell Resistance', 'Advantage on saving throws against spells, and resistance to damage from spells.'),
+        ],
+      },
+      {
+        key: 'divination',
+        name: 'School of Divination',
+        features: [
+          feat(2, 'Divination Savant', 'The gold and time you must spend to copy a divination spell into your spellbook is halved.'),
+          feat(2, 'Portent', 'Roll two d20s after a long rest; you can replace any attack roll, ability check, or saving throw made by you or a creature you can see with one of these rolls.'),
+          feat(6, 'Expert Divination', 'When you cast a divination spell of 2nd level or higher using a spell slot, regain one expended spell slot of lower level.'),
+          feat(10, 'The Third Eye', 'Use your action to gain darkvision, see invisible creatures, read any language, or see the true form of a shapechanged/polymorphed creature, until you use this feature again.'),
+          feat(14, 'Greater Portent', 'Roll three d20s for your Portent feature instead of two.'),
+        ],
+      },
     ],
     spellcasting: {
       ability: 'int',

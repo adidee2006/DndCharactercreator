@@ -27,6 +27,8 @@ import { generateCharacterSheetPdf } from '../lib/pdfExport';
 import { characterToExportFile, downloadJson, slugFilename } from '../lib/jsonExport';
 import { totalValueInGp, autoExchange, formatGp } from '../lib/currency';
 import { itemDescription } from '../lib/itemSummary';
+import { isProficientWithItem, isEligibleForFeat } from '../lib/eligibility';
+import { fightingStyles, fightingStylesByKey } from '../data/srd/fightingStyles';
 import { v4 as uuid } from 'uuid';
 
 const TABS = ['Main', 'Combat', 'Spells', 'Inventory', 'Features', 'Bio'] as const;
@@ -114,13 +116,16 @@ export default function CharacterSheet() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <Link to={`/character/${character.id}/level-up`} className="btn-primary">
+            ⬆︎ Level Up
+          </Link>
           <Link to={`/character/${character.id}/edit`} className="btn-secondary">
-            Edit / Level Up
+            Edit
           </Link>
           <button className="btn-secondary" onClick={handleExportJson}>
             Export JSON
           </button>
-          <button className="btn-primary" onClick={handleExportPdf} disabled={exporting}>
+          <button className="btn-secondary" onClick={handleExportPdf} disabled={exporting}>
             {exporting ? 'Generating…' : 'Export PDF'}
           </button>
           <button className="btn-danger" onClick={handleDelete}>
@@ -306,6 +311,24 @@ function CombatTab({
             placeholder="Auto"
             onChange={(e) => update({ acOverride: e.target.value === '' ? undefined : Number(e.target.value) })}
           />
+        </div>
+        <div>
+          <label className="label">Fighting Style</label>
+          <select
+            className="input"
+            value={character.fightingStyle ?? ''}
+            onChange={(e) => update({ fightingStyle: e.target.value || undefined })}
+          >
+            <option value="">None</option>
+            {fightingStyles.map((fs) => (
+              <option key={fs.key} value={fs.key}>
+                {fs.name}
+              </option>
+            ))}
+          </select>
+          {character.fightingStyle && (
+            <p className="mt-1 text-xs text-stone-500">{fightingStylesByKey[character.fightingStyle]?.description}</p>
+          )}
         </div>
       </div>
 
@@ -615,6 +638,8 @@ function InventoryTab({
     setExpanded((e) => ({ ...e, [id]: !e[id] }));
   }
 
+  const [showAllItems, setShowAllItems] = useState(false);
+
   const totalWeight = character.inventory.reduce((sum, inv) => {
     const item = inv.itemKey ? compendium.items[inv.itemKey] : undefined;
     return sum + (item?.weight ?? 0) * inv.quantity;
@@ -630,10 +655,17 @@ function InventoryTab({
           <p className="text-sm text-stone-500">Total weight: {totalWeight} lb</p>
         </div>
         <div className="w-full sm:w-72">
-          <label className="label">Add Item</label>
+          <div className="flex items-center justify-between">
+            <label className="label">Add Item</label>
+            <label className="mb-1 flex items-center gap-1 text-xs text-stone-500">
+              <input type="checkbox" checked={showAllItems} onChange={(e) => setShowAllItems(e.target.checked)} />
+              Show all
+            </label>
+          </div>
           <select className="input" value="" onChange={(e) => addItem(e.target.value)}>
             <option value="">Choose an item…</option>
             {Object.values(compendium.items)
+              .filter((item) => showAllItems || isProficientWithItem(character, compendium, item))
               .sort((a, b) => a.name.localeCompare(b.name))
               .map((item) => (
                 <option key={item.key} value={item.key}>
@@ -684,7 +716,22 @@ function InventoryTab({
               </div>
               {isOpen && (
                 <div className="border-t border-stone-200 px-3 py-3 text-sm dark:border-stone-800">
-                  <p className="mb-3 text-stone-500">{item ? itemDescription(item) : 'Custom item — no compendium entry.'}</p>
+                  {item ? (
+                    item.contains ? (
+                      <div className="mb-3">
+                        <p className="mb-1 text-stone-500">Contains:</p>
+                        <ul className="ml-4 list-disc space-y-0.5 text-stone-500">
+                          {item.contains.map((c, i) => (
+                            <li key={i}>{c}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    ) : (
+                      <p className="mb-3 text-stone-500">{itemDescription(item)}</p>
+                    )
+                  ) : (
+                    <p className="mb-3 text-stone-500">Custom item — no compendium entry.</p>
+                  )}
                   <label className="label">Notes</label>
                   <textarea
                     className="input"
@@ -804,6 +851,7 @@ function FeaturesTab({
                       <strong>
                         {f.name} ({subclass.name} {f.level})
                       </strong>
+                      : <span className="text-stone-500">{f.description}</span>
                     </p>
                   ))}
               </div>
@@ -851,13 +899,14 @@ function FeaturesTab({
         >
           <option value="">Add a feat…</option>
           {Object.values(compendium.feats)
-            .filter((f) => !character.feats.includes(f.key))
+            .filter((f) => !character.feats.includes(f.key) && isEligibleForFeat(character, compendium, f))
             .map((f) => (
               <option key={f.key} value={f.key}>
                 {f.name}
               </option>
             ))}
         </select>
+        <p className="mt-1 text-xs text-stone-400">Feats with prerequisites this character doesn't meet are hidden.</p>
         <div className="mt-2 space-y-1">
           {character.feats.map((key) => {
             const feat = compendium.feats[key];
@@ -870,6 +919,7 @@ function FeaturesTab({
                     Remove
                   </button>
                 </div>
+                {feat.prerequisite && <p className="text-xs italic text-stone-400">Prerequisite: {feat.prerequisite}</p>}
                 <p className="text-stone-500">{feat.description}</p>
               </div>
             );

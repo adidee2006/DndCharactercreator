@@ -10,8 +10,9 @@ function weapon(
   damageType: string,
   weight: number,
   properties: string[] = [],
+  category: 'simple' | 'martial' = 'simple',
 ): Item {
-  return { key, name, source: SRD, type: 'weapon', cost, damage, damageType, weight, weaponProperties: properties };
+  return { key, name, source: SRD, type: 'weapon', cost, damage, damageType, weight, weaponProperties: properties, weaponCategory: category };
 }
 
 function armor(
@@ -38,6 +39,19 @@ function gear(key: string, name: string, cost: string, weight: number, descripti
   return { key, name, source: SRD, type: 'gear', cost, weight, description };
 }
 
+function pack(key: string, name: string, cost: string, weight: number, contains: string[]): Item {
+  return {
+    key,
+    name,
+    source: SRD,
+    type: 'gear',
+    cost,
+    weight,
+    contains,
+    description: `A ${name.toLowerCase()} contains: ${contains.join(', ')}.`,
+  };
+}
+
 export const items: Record<string, Item> = {
   // Simple Melee Weapons
   club: weapon('club', 'Club', '1 sp', '1d4', 'bludgeoning', 2, ['Light']),
@@ -56,44 +70,44 @@ export const items: Record<string, Item> = {
   shortbow: weapon('shortbow', 'Shortbow', '25 gp', '1d6', 'piercing', 2, ['Ammunition (80/320)', 'Two-Handed']),
   sling: weapon('sling', 'Sling', '1 sp', '1d4', 'bludgeoning', 0, ['Ammunition (30/120)']),
   // Martial Melee
-  battleaxe: weapon('battleaxe', 'Battleaxe', '10 gp', '1d8', 'slashing', 4, ['Versatile (1d10)']),
-  flail: weapon('flail', 'Flail', '10 gp', '1d8', 'bludgeoning', 2, []),
-  glaive: weapon('glaive', 'Glaive', '20 gp', '1d10', 'slashing', 6, ['Heavy', 'Reach', 'Two-Handed']),
-  greataxe: weapon('greataxe', 'Greataxe', '30 gp', '1d12', 'slashing', 7, ['Heavy', 'Two-Handed']),
-  greatsword: weapon('greatsword', 'Greatsword', '50 gp', '2d6', 'slashing', 6, ['Heavy', 'Two-Handed']),
-  halberd: weapon('halberd', 'Halberd', '20 gp', '1d10', 'slashing', 6, ['Heavy', 'Reach', 'Two-Handed']),
-  lance: weapon('lance', 'Lance', '10 gp', '1d12', 'piercing', 6, ['Reach', 'Special']),
-  longsword: weapon('longsword', 'Longsword', '15 gp', '1d8', 'slashing', 3, ['Versatile (1d10)']),
-  maul: weapon('maul', 'Maul', '10 gp', '2d6', 'bludgeoning', 10, ['Heavy', 'Two-Handed']),
-  morningstar: weapon('morningstar', 'Morningstar', '15 gp', '1d8', 'piercing', 4, []),
-  pike: weapon('pike', 'Pike', '5 gp', '1d10', 'piercing', 18, ['Heavy', 'Reach', 'Two-Handed']),
-  rapier: weapon('rapier', 'Rapier', '25 gp', '1d8', 'piercing', 2, ['Finesse']),
-  scimitar: weapon('scimitar', 'Scimitar', '25 gp', '1d6', 'slashing', 3, ['Finesse', 'Light']),
-  shortsword: weapon('shortsword', 'Shortsword', '10 gp', '1d6', 'piercing', 2, ['Finesse', 'Light']),
-  trident: weapon('trident', 'Trident', '5 gp', '1d6', 'piercing', 4, ['Thrown (20/60)', 'Versatile (1d8)']),
-  warhammer: weapon('warhammer', 'Warhammer', '15 gp', '1d8', 'bludgeoning', 2, ['Versatile (1d10)']),
-  whip: weapon('whip', 'Whip', '2 gp', '1d4', 'slashing', 3, ['Finesse', 'Reach']),
+  battleaxe: weapon('battleaxe', 'Battleaxe', '10 gp', '1d8', 'slashing', 4, ['Versatile (1d10)'], 'martial'),
+  flail: weapon('flail', 'Flail', '10 gp', '1d8', 'bludgeoning', 2, [], 'martial'),
+  glaive: weapon('glaive', 'Glaive', '20 gp', '1d10', 'slashing', 6, ['Heavy', 'Reach', 'Two-Handed'], 'martial'),
+  greataxe: weapon('greataxe', 'Greataxe', '30 gp', '1d12', 'slashing', 7, ['Heavy', 'Two-Handed'], 'martial'),
+  greatsword: weapon('greatsword', 'Greatsword', '50 gp', '2d6', 'slashing', 6, ['Heavy', 'Two-Handed'], 'martial'),
+  halberd: weapon('halberd', 'Halberd', '20 gp', '1d10', 'slashing', 6, ['Heavy', 'Reach', 'Two-Handed'], 'martial'),
+  lance: weapon('lance', 'Lance', '10 gp', '1d12', 'piercing', 6, ['Reach', 'Special'], 'martial'),
+  longsword: weapon('longsword', 'Longsword', '15 gp', '1d8', 'slashing', 3, ['Versatile (1d10)'], 'martial'),
+  maul: weapon('maul', 'Maul', '10 gp', '2d6', 'bludgeoning', 10, ['Heavy', 'Two-Handed'], 'martial'),
+  morningstar: weapon('morningstar', 'Morningstar', '15 gp', '1d8', 'piercing', 4, [], 'martial'),
+  pike: weapon('pike', 'Pike', '5 gp', '1d10', 'piercing', 18, ['Heavy', 'Reach', 'Two-Handed'], 'martial'),
+  rapier: weapon('rapier', 'Rapier', '25 gp', '1d8', 'piercing', 2, ['Finesse'], 'martial'),
+  scimitar: weapon('scimitar', 'Scimitar', '25 gp', '1d6', 'slashing', 3, ['Finesse', 'Light'], 'martial'),
+  shortsword: weapon('shortsword', 'Shortsword', '10 gp', '1d6', 'piercing', 2, ['Finesse', 'Light'], 'martial'),
+  trident: weapon('trident', 'Trident', '5 gp', '1d6', 'piercing', 4, ['Thrown (20/60)', 'Versatile (1d8)'], 'martial'),
+  warhammer: weapon('warhammer', 'Warhammer', '15 gp', '1d8', 'bludgeoning', 2, ['Versatile (1d10)'], 'martial'),
+  whip: weapon('whip', 'Whip', '2 gp', '1d4', 'slashing', 3, ['Finesse', 'Reach'], 'martial'),
   // Martial Ranged
-  blowgun: weapon('blowgun', 'Blowgun', '10 gp', '1', 'piercing', 1, ['Ammunition (25/100)', 'Loading']),
-  'hand-crossbow': weapon('hand-crossbow', 'Crossbow, Hand', '75 gp', '1d6', 'piercing', 3, ['Ammunition (30/120)', 'Light', 'Loading']),
-  'heavy-crossbow': weapon('heavy-crossbow', 'Crossbow, Heavy', '50 gp', '1d10', 'piercing', 18, ['Ammunition (100/400)', 'Heavy', 'Loading', 'Two-Handed']),
-  longbow: weapon('longbow', 'Longbow', '50 gp', '1d8', 'piercing', 2, ['Ammunition (150/600)', 'Heavy', 'Two-Handed']),
+  blowgun: weapon('blowgun', 'Blowgun', '10 gp', '1', 'piercing', 1, ['Ammunition (25/100)', 'Loading'], 'martial'),
+  'hand-crossbow': weapon('hand-crossbow', 'Crossbow, Hand', '75 gp', '1d6', 'piercing', 3, ['Ammunition (30/120)', 'Light', 'Loading'], 'martial'),
+  'heavy-crossbow': weapon('heavy-crossbow', 'Crossbow, Heavy', '50 gp', '1d10', 'piercing', 18, ['Ammunition (100/400)', 'Heavy', 'Loading', 'Two-Handed'], 'martial'),
+  longbow: weapon('longbow', 'Longbow', '50 gp', '1d8', 'piercing', 2, ['Ammunition (150/600)', 'Heavy', 'Two-Handed'], 'martial'),
 
   // Light Armor
-  padded: armor('padded', 'Padded', '5 gp', 11, 8, { armorClassAddDex: true, stealthDisadvantage: true }),
-  leather: armor('leather', 'Leather', '10 gp', 11, 10, { armorClassAddDex: true }),
-  'studded-leather': armor('studded-leather', 'Studded Leather', '45 gp', 12, 13, { armorClassAddDex: true }),
+  padded: armor('padded', 'Padded', '5 gp', 11, 8, { armorCategory: 'light', armorClassAddDex: true, stealthDisadvantage: true }),
+  leather: armor('leather', 'Leather', '10 gp', 11, 10, { armorCategory: 'light', armorClassAddDex: true }),
+  'studded-leather': armor('studded-leather', 'Studded Leather', '45 gp', 12, 13, { armorCategory: 'light', armorClassAddDex: true }),
   // Medium Armor
-  hide: armor('hide', 'Hide', '10 gp', 12, 12, { armorClassAddDex: true, armorClassMaxDex: 2 }),
-  'chain-shirt': armor('chain-shirt', 'Chain Shirt', '50 gp', 13, 20, { armorClassAddDex: true, armorClassMaxDex: 2 }),
-  scalemail: armor('scalemail', 'Scale Mail', '50 gp', 14, 45, { armorClassAddDex: true, armorClassMaxDex: 2, stealthDisadvantage: true }),
-  breastplate: armor('breastplate', 'Breastplate', '400 gp', 14, 20, { armorClassAddDex: true, armorClassMaxDex: 2 }),
-  'half-plate': armor('half-plate', 'Half Plate', '750 gp', 15, 40, { armorClassAddDex: true, armorClassMaxDex: 2, stealthDisadvantage: true }),
+  hide: armor('hide', 'Hide', '10 gp', 12, 12, { armorCategory: 'medium', armorClassAddDex: true, armorClassMaxDex: 2 }),
+  'chain-shirt': armor('chain-shirt', 'Chain Shirt', '50 gp', 13, 20, { armorCategory: 'medium', armorClassAddDex: true, armorClassMaxDex: 2 }),
+  scalemail: armor('scalemail', 'Scale Mail', '50 gp', 14, 45, { armorCategory: 'medium', armorClassAddDex: true, armorClassMaxDex: 2, stealthDisadvantage: true }),
+  breastplate: armor('breastplate', 'Breastplate', '400 gp', 14, 20, { armorCategory: 'medium', armorClassAddDex: true, armorClassMaxDex: 2 }),
+  'half-plate': armor('half-plate', 'Half Plate', '750 gp', 15, 40, { armorCategory: 'medium', armorClassAddDex: true, armorClassMaxDex: 2, stealthDisadvantage: true }),
   // Heavy Armor
-  'ring-mail': armor('ring-mail', 'Ring Mail', '30 gp', 14, 40, { stealthDisadvantage: true }),
-  chainmail: armor('chainmail', 'Chain Mail', '75 gp', 16, 55, { strengthRequirement: 13, stealthDisadvantage: true }),
-  splint: armor('splint', 'Splint', '200 gp', 17, 60, { strengthRequirement: 15, stealthDisadvantage: true }),
-  plate: armor('plate', 'Plate', '1500 gp', 18, 65, { strengthRequirement: 15, stealthDisadvantage: true }),
+  'ring-mail': armor('ring-mail', 'Ring Mail', '30 gp', 14, 40, { armorCategory: 'heavy', stealthDisadvantage: true }),
+  chainmail: armor('chainmail', 'Chain Mail', '75 gp', 16, 55, { armorCategory: 'heavy', strengthRequirement: 13, stealthDisadvantage: true }),
+  splint: armor('splint', 'Splint', '200 gp', 17, 60, { armorCategory: 'heavy', strengthRequirement: 15, stealthDisadvantage: true }),
+  plate: armor('plate', 'Plate', '1500 gp', 18, 65, { armorCategory: 'heavy', strengthRequirement: 15, stealthDisadvantage: true }),
   // Shield
   shield: armor('shield', 'Shield', '10 gp', 2, 6, { type: 'shield' }),
 
@@ -121,6 +135,88 @@ export const items: Record<string, Item> = {
   arrows: gear('arrows', 'Arrows (20)', '1 gp', 1),
   bolts: gear('bolts', 'Crossbow Bolts (20)', '1 gp', 1.5),
   bullets: gear('bullets', 'Sling Bullets (20)', '4 cp', 1.5),
+
+  // Equipment Packs
+  'burglars-pack': pack('burglars-pack', "Burglar's Pack", '16 gp', 44.5, [
+    'Backpack',
+    '1,000 ball bearings',
+    '10 ft of string',
+    'A bell',
+    '5 candles',
+    'A crowbar',
+    'A hammer',
+    '10 pitons',
+    'A hooded lantern',
+    '2 flasks of oil',
+    "5 days' rations",
+    'A tinderbox',
+    'A waterskin',
+    '50 ft of hempen rope (coiled)',
+  ]),
+  'diplomats-pack': pack('diplomats-pack', "Diplomat's Pack", '39 gp', 36, [
+    'A chest',
+    '2 cases for maps and scrolls',
+    'A set of fine clothes',
+    'A bottle of ink',
+    'An ink pen',
+    'A lamp',
+    '2 flasks of oil',
+    '5 sheets of paper',
+    'A vial of perfume',
+    'Sealing wax',
+    'Soap',
+  ]),
+  'dungeoneers-pack': pack('dungeoneers-pack', "Dungeoneer's Pack", '12 gp', 61.5, [
+    'Backpack',
+    'A crowbar',
+    'A hammer',
+    '10 pitons',
+    '10 torches',
+    'A tinderbox',
+    "10 days' rations",
+    'A waterskin',
+    '50 ft of hempen rope (coiled)',
+  ]),
+  'entertainers-pack': pack('entertainers-pack', "Entertainer's Pack", '40 gp', 38, [
+    'Backpack',
+    'A bedroll',
+    '2 costumes',
+    '5 candles',
+    "5 days' rations",
+    'A waterskin',
+    'A disguise kit',
+  ]),
+  'explorers-pack': pack('explorers-pack', "Explorer's Pack", '10 gp', 59, [
+    'Backpack',
+    'A bedroll',
+    'A mess kit',
+    'A tinderbox',
+    '10 torches',
+    "10 days' rations",
+    'A waterskin',
+    '50 ft of hempen rope (coiled)',
+  ]),
+  'priests-pack': pack('priests-pack', "Priest's Pack", '19 gp', 24.5, [
+    'Backpack',
+    'A blanket',
+    '10 candles',
+    'A tinderbox',
+    'An alms box',
+    '2 blocks of incense',
+    'A censer',
+    'Vestments',
+    "2 days' rations",
+    'A waterskin',
+  ]),
+  'scholars-pack': pack('scholars-pack', "Scholar's Pack", '40 gp', 11, [
+    'Backpack',
+    'A book of lore',
+    'A bottle of ink',
+    'An ink pen',
+    '10 sheets of parchment',
+    'A little bag of sand',
+    'A small knife',
+  ]),
 
   // Tools (musical instruments / gaming sets / artisan)
   'herbalism-kit': { key: 'herbalism-kit', name: 'Herbalism Kit', source: SRD, type: 'tool', cost: '5 gp', weight: 3 },

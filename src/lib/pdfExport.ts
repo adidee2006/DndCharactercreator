@@ -2,6 +2,7 @@ import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from 'pdf
 import type { Character } from '../types/character';
 import type { Compendium } from '../types/compendium';
 import { ABILITY_KEYS, ABILITY_NAMES, SKILLS } from '../types/compendium';
+import { fightingStylesByKey } from '../data/srd/fightingStyles';
 import {
   getAbilityModifiers,
   getFinalAbilityScores,
@@ -18,6 +19,9 @@ import {
   getSpellSlots,
   getPactMagicSlots,
   formatModifier,
+  isRangedWeapon,
+  getFightingStyleAttackBonus,
+  getFightingStyleDamageBonus,
 } from './calc';
 
 const PAGE_W = 612;
@@ -295,11 +299,15 @@ export async function generateCharacterSheetPdf(character: Character, compendium
   for (let i = 0; i < attackRows; i++) {
     const w = weapons[i];
     if (w) {
-      const finesseOrRanged = w.weaponProperties?.some((p) => p.startsWith('Finesse')) || w.type === 'weapon';
-      const abilityMod = finesseOrRanged ? Math.max(mods.str, mods.dex) : mods.str;
+      const ranged = isRangedWeapon(w);
+      const hasFinesse = w.weaponProperties?.some((p) => p.startsWith('Finesse'));
+      const abilityMod = ranged ? mods.dex : hasFinesse ? Math.max(mods.str, mods.dex) : mods.str;
+      const attackBonus = abilityMod + prof + getFightingStyleAttackBonus(character, w);
+      const damageBonus = abilityMod + getFightingStyleDamageBonus(character, w);
+      const damageText = w.damage ? `${w.damage}${damageBonus !== 0 ? formatModifier(damageBonus) : ''} ${w.damageType ?? ''}`.trim() : '';
       text(ctx, w.name, MARGIN + 4, y, { size: 8 });
-      text(ctx, formatModifier(abilityMod + prof), MARGIN + 240, y, { size: 8 });
-      text(ctx, `${w.damage ?? ''} ${w.damageType ?? ''}`.trim(), MARGIN + 340, y, { size: 8 });
+      text(ctx, formatModifier(attackBonus), MARGIN + 240, y, { size: 8 });
+      text(ctx, damageText, MARGIN + 340, y, { size: 8 });
     }
     y -= 12;
   }
@@ -351,7 +359,15 @@ export async function generateCharacterSheetPdf(character: Character, compendium
   for (const cl of character.classes) {
     const cls = compendium.classes[cl.classKey];
     if (!cls) continue;
-    for (const f of cls.features) if (f.level <= cl.level) featureTexts.push(`${f.name} (${cls.name} ${f.level})`);
+    for (const f of cls.features) {
+      if (f.level > cl.level) continue;
+      if (f.name.includes('Fighting Style') && character.fightingStyle) {
+        const style = fightingStylesByKey[character.fightingStyle];
+        featureTexts.push(`Fighting Style: ${style?.name ?? character.fightingStyle} (${cls.name} ${f.level})`);
+      } else {
+        featureTexts.push(`${f.name} (${cls.name} ${f.level})`);
+      }
+    }
     const subclass = cls.subclasses.find((s) => s.key === cl.subclassKey);
     if (subclass) for (const f of subclass.features) if (f.level <= cl.level) featureTexts.push(`${f.name} (${subclass.name} ${f.level})`);
   }

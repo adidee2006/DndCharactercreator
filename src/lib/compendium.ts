@@ -121,25 +121,59 @@ interface D5eApiListResponse {
   results: D5eApiIndexEntry[];
 }
 
+const FETCH_TIMEOUT_MS = 12000;
+
 async function fetchJson<T>(url: string): Promise<T> {
-  const res = await fetch(url, { headers: { Accept: 'application/json' } });
-  if (!res.ok) throw new Error(`${res.status} ${res.statusText} for ${url}`);
-  return (await res.json()) as T;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  try {
+    const res = await fetch(url, { headers: { Accept: 'application/json' }, signal: controller.signal });
+    if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+    return (await res.json()) as T;
+  } catch (err) {
+    if ((err as Error).name === 'AbortError') throw new Error('timed out');
+    // A network-level failure here almost always means the request never left the
+    // browser (offline, DNS failure, or the remote host refusing/CORS-blocking it),
+    // not a bug in the parsing below — surface that distinction to the user.
+    if (err instanceof TypeError) throw new Error('network request failed (offline, or the API is unreachable from this browser)');
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/** Runs async work over a list with at most `limit` requests in flight at once. */
+async function mapWithConcurrency<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]> {
+  const results: R[] = new Array(items.length);
+  let next = 0;
+  async function worker() {
+    while (next < items.length) {
+      const i = next++;
+      results[i] = await fn(items[i]);
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+  return results;
 }
 
 const REMOTE: SourceInfo = { origin: 'remote', label: 'dnd5eapi.co (synced)' };
+const CONCURRENCY = 8;
 
 /**
  * Pulls the full SRD spell and equipment lists from the public dnd5eapi.co
  * REST API and stores them as "remote" compendium entries, which take
  * precedence over the bundled starter data. Safe to re-run; it's an upsert.
+ * Fetches run with bounded concurrency (not one-at-a-time) so a full sync
+ * takes seconds rather than minutes.
  */
 export async function syncCompendiumFromInternet(
   onProgress?: (p: SyncProgress) => void,
-): Promise<{ spells: number; items: number; errors: string[] }> {
+): Promise<{ spellsFetched: number; spellsSaved: number; itemsFetched: number; itemsSaved: number; errors: string[] }> {
   const errors: string[] = [];
-  let spellCount = 0;
-  let itemCount = 0;
+  let spellsFetched = 0;
+  let spellsSaved = 0;
+  let itemsFetched = 0;
+  let itemsSaved = 0;
 
   const report = (stage: string, fetched: number) => onProgress?.({ stage, fetched, errors });
 
@@ -147,8 +181,8 @@ export async function syncCompendiumFromInternet(
   try {
     report('Listing spells…', 0);
     const list = await fetchJson<D5eApiListResponse>(`${DND5E_API}/spells`);
-    const spellsToSave: Spell[] = [];
-    for (const entry of list.results) {
+    let fetched = 0;
+    const spellResults = await mapWithConcurrency(list.results, CONCURRENCY, async (entry) => {
       try {
         const detail = await fetchJson<any>(`${DND5E_API}${entry.url}`);
         const spell: Spell = {
@@ -159,10 +193,7 @@ export async function syncCompendiumFromInternet(
           school: (detail.school?.name ?? 'Evocation') as Spell['school'],
           castingTime: detail.casting_time ?? '1 action',
           range: detail.range ?? 'Self',
-          components: [
-            ...(detail.components ?? []),
-            detail.material ? `(${detail.material})` : '',
-          ]
+          components: [...(detail.components ?? []), detail.material ? `(${detail.material})` : '']
             .filter(Boolean)
             .join(', '),
           duration: detail.duration ?? 'Instantaneous',
@@ -171,25 +202,34 @@ export async function syncCompendiumFromInternet(
           classes: (detail.classes ?? []).map((c: { index: string }) => c.index),
           description: Array.isArray(detail.desc) ? detail.desc.join('\n\n') : String(detail.desc ?? ''),
         };
-        spellsToSave.push(spell);
+        return spell;
       } catch (err) {
         errors.push(`Spell "${entry.name}": ${(err as Error).message}`);
+        return null;
+      } finally {
+        fetched++;
+        if (fetched % 15 === 0 || fetched === list.results.length) report('Fetching spells…', fetched);
       }
-      spellCount++;
-      if (spellCount % 15 === 0) report('Fetching spells…', spellCount);
+    });
+    const spellsToSave = spellResults.filter((s): s is Spell => s != null);
+    spellsFetched = list.results.length;
+    try {
+      await db.spells.bulkPut(spellsToSave);
+      spellsSaved = spellsToSave.length;
+    } catch (err) {
+      errors.push(`Saving spells to the local database failed: ${(err as Error).message}`);
     }
-    await db.spells.bulkPut(spellsToSave);
-    report('Fetching spells…', spellCount);
+    report('Fetching spells…', spellsFetched);
   } catch (err) {
-    errors.push(`Spell list: ${(err as Error).message}`);
+    errors.push(`Couldn't list spells: ${(err as Error).message}`);
   }
 
   // --- Equipment (weapons, armor, adventuring gear) ---
   try {
     report('Listing equipment…', 0);
     const list = await fetchJson<D5eApiListResponse>(`${DND5E_API}/equipment`);
-    const itemsToSave: Item[] = [];
-    for (const entry of list.results) {
+    let fetched = 0;
+    const itemResults = await mapWithConcurrency(list.results, CONCURRENCY, async (entry) => {
       try {
         const detail = await fetchJson<any>(`${DND5E_API}${entry.url}`);
         const category: string = detail.equipment_category?.name ?? 'Adventuring Gear';
@@ -212,23 +252,34 @@ export async function syncCompendiumFromInternet(
           stealthDisadvantage: !!detail.stealth_disadvantage,
           description: Array.isArray(detail.desc) ? detail.desc.join('\n\n') : undefined,
         };
-        itemsToSave.push(item);
+        return item;
       } catch (err) {
         errors.push(`Item "${entry.name}": ${(err as Error).message}`);
+        return null;
+      } finally {
+        fetched++;
+        if (fetched % 15 === 0 || fetched === list.results.length) report('Fetching equipment…', fetched);
       }
-      itemCount++;
-      if (itemCount % 15 === 0) report('Fetching equipment…', itemCount);
+    });
+    const itemsToSave = itemResults.filter((i): i is Item => i != null);
+    itemsFetched = list.results.length;
+    try {
+      await db.items.bulkPut(itemsToSave);
+      itemsSaved = itemsToSave.length;
+    } catch (err) {
+      errors.push(`Saving equipment to the local database failed: ${(err as Error).message}`);
     }
-    await db.items.bulkPut(itemsToSave);
-    report('Fetching equipment…', itemCount);
+    report('Fetching equipment…', itemsFetched);
   } catch (err) {
-    errors.push(`Equipment list: ${(err as Error).message}`);
+    errors.push(`Couldn't list equipment: ${(err as Error).message}`);
   }
 
-  await setSyncMeta('lastRemoteSync', new Date().toISOString());
-  await setSyncMeta('lastRemoteSyncCounts', JSON.stringify({ spells: spellCount, items: itemCount }));
+  if (spellsSaved > 0 || itemsSaved > 0) {
+    await setSyncMeta('lastRemoteSync', new Date().toISOString());
+    await setSyncMeta('lastRemoteSyncCounts', JSON.stringify({ spellsSaved, itemsSaved }));
+  }
 
-  return { spells: spellCount, items: itemCount, errors };
+  return { spellsFetched, spellsSaved, itemsFetched, itemsSaved, errors };
 }
 
 // --------------------------------------------------------------------------
