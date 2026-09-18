@@ -8,6 +8,7 @@ import CharacterWizard from './pages/CharacterWizard.tsx';
 import CharacterSheet from './pages/CharacterSheet.tsx';
 import CompendiumManager from './pages/CompendiumManager.tsx';
 import LevelUp from './pages/LevelUp.tsx';
+import Sync from './pages/Sync.tsx';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -20,6 +21,7 @@ createRoot(document.getElementById('root')!).render(
           <Route path="character/:id/edit" element={<CharacterWizard />} />
           <Route path="character/:id/level-up" element={<LevelUp />} />
           <Route path="compendium" element={<CompendiumManager />} />
+          <Route path="sync" element={<Sync />} />
         </Route>
       </Routes>
     </HashRouter>
