@@ -11,15 +11,23 @@ function App() {
 
   return (
     <div className="min-h-screen">
-      <header className="sticky top-0 z-20 border-b border-stone-300/60 bg-stone-100/90 backdrop-blur dark:border-stone-800 dark:bg-stone-950/90">
+      <header className="sticky top-0 z-20 border-b border-stone-300/60 bg-stone-100/80 backdrop-blur-md dark:border-stone-800/80 dark:bg-stone-950/80">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
-          <Link to="/" className="flex items-center gap-2 text-lg font-bold tracking-tight">
-            <span aria-hidden className="text-xl">{'⚔️'}</span>
+          <Link to="/" className="flex items-center gap-2 text-lg font-bold tracking-tight transition-opacity hover:opacity-80">
+            <span
+              aria-hidden
+              className="text-xl drop-shadow-[0_1px_2px_rgba(153,27,27,0.4)]"
+            >
+              {'⚔️'}
+            </span>
             <span>
-              Grimoire <span className="text-red-800 dark:text-red-400">Sheets</span>
+              Grimoire{' '}
+              <span className="bg-gradient-to-r from-red-700 to-red-500 bg-clip-text text-transparent dark:from-red-400 dark:to-amber-400">
+                Sheets
+              </span>
             </span>
           </Link>
-          <nav className="flex items-center gap-2">
+          <nav className="flex items-center gap-1.5">
             <Link to="/" className="btn-ghost">
               Characters
             </Link>

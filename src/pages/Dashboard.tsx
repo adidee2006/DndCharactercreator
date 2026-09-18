@@ -71,14 +71,22 @@ export default function Dashboard() {
               .join(' / ');
             const race = compendium.races[c.race.key]?.name;
             return (
-              <div key={c.id} className="card flex flex-col justify-between p-4">
+              <div
+                key={c.id}
+                className="card group flex flex-col justify-between overflow-hidden p-4 transition-all hover:-translate-y-1 hover:shadow-lg"
+              >
+                <div className="-mx-4 -mt-4 mb-3 h-1 bg-gradient-to-r from-red-700 via-red-500 to-amber-500 opacity-80" />
                 <Link to={`/character/${c.id}`}>
-                  <h2 className="text-lg font-bold">{c.name}</h2>
-                  <p className="text-sm text-stone-500">
-                    {race ?? 'No race'} {classLine ? `• ${classLine}` : ''}
-                  </p>
-                  <p className="mt-1 text-xs text-stone-400">
-                    Level {getTotalLevel(c)} • AC {getArmorClass(c, compendium)} • HP {getHitPointsMax(c, compendium)}
+                  <h2 className="text-lg font-bold transition-colors group-hover:text-red-800 dark:group-hover:text-red-400">
+                    {c.name}
+                  </h2>
+                  <div className="mt-1.5 flex flex-wrap gap-1">
+                    <span className="pill">{race ?? 'No race'}</span>
+                    {classLine && <span className="pill">{classLine}</span>}
+                    <span className="pill">Lvl {getTotalLevel(c)}</span>
+                  </div>
+                  <p className="mt-2 text-xs text-stone-400">
+                    AC {getArmorClass(c, compendium)} • HP {getHitPointsMax(c, compendium)}
                   </p>
                 </Link>
                 <div className="mt-3 flex flex-wrap gap-2">

@@ -15,6 +15,7 @@ import {
   blankAbilityScores,
 } from '../lib/abilityGeneration';
 import { getFinalAbilityScores, abilityModifier, formatModifier, getSpellcastingClasses, getHitPointsMax } from '../lib/calc';
+import { itemDescription } from '../lib/itemSummary';
 
 const STEPS = ['Basics', 'Race', 'Class', 'Abilities', 'Skills', 'Equipment', 'Spells', 'Review'] as const;
 
@@ -645,22 +646,30 @@ function EquipmentStep({
         {character.inventory.map((inv) => {
           const item = inv.itemKey ? compendium.items[inv.itemKey] : undefined;
           return (
-            <div key={inv.id} className="flex items-center gap-2 rounded-lg border border-stone-300 px-2 py-1 text-sm dark:border-stone-700">
-              <span className="flex-1">{item?.name ?? inv.customName}</span>
-              <input
-                type="number"
-                min={1}
-                className="input w-16"
-                value={inv.quantity}
-                onChange={(e) => setQty(inv.id, Number(e.target.value) || 1)}
-              />
-              <label className="flex items-center gap-1 text-xs">
-                <input type="checkbox" checked={inv.equipped} onChange={() => toggleEquipped(inv.id)} />
-                Equipped
-              </label>
-              <button className="btn-danger" onClick={() => removeItem(inv.id)}>
-                Remove
-              </button>
+            <div key={inv.id} className="item-row px-2 py-1 text-sm">
+              <div className="flex items-center gap-2">
+                <span className="flex-1">{item?.name ?? inv.customName}</span>
+                <input
+                  type="number"
+                  min={1}
+                  className="input w-16"
+                  value={inv.quantity}
+                  onChange={(e) => setQty(inv.id, Number(e.target.value) || 1)}
+                />
+                <label className="flex items-center gap-1 text-xs">
+                  <input type="checkbox" checked={inv.equipped} onChange={() => toggleEquipped(inv.id)} />
+                  Equipped
+                </label>
+                <button className="btn-danger" onClick={() => removeItem(inv.id)}>
+                  Remove
+                </button>
+              </div>
+              {item && (
+                <details className="mt-1">
+                  <summary className="cursor-pointer text-xs text-stone-500">Description</summary>
+                  <p className="mt-1 text-xs text-stone-500">{itemDescription(item)}</p>
+                </details>
+              )}
             </div>
           );
         })}
@@ -727,7 +736,8 @@ function SpellsStep({
           const known = character.spellsKnown.includes(sp.key);
           const prepared = character.spellsPrepared.includes(sp.key);
           return (
-            <div key={sp.key} className="flex items-center gap-2 rounded-lg border border-stone-300 px-2 py-1.5 text-sm dark:border-stone-700">
+            <div key={sp.key} className="item-row px-2 py-1.5 text-sm">
+              <div className="flex items-center gap-2">
               <label className="flex flex-1 items-center gap-2">
                 <input type="checkbox" checked={known} onChange={() => toggleKnown(sp.key)} />
                 <span className="font-medium">{sp.name}</span>
@@ -738,6 +748,16 @@ function SpellsStep({
                   <input type="checkbox" checked={prepared} onChange={() => togglePrepared(sp.key)} />
                   Prepared
                 </label>
+              )}
+              </div>
+              {sp.description && (
+                <details className="mt-1">
+                  <summary className="cursor-pointer text-xs text-stone-500">Description</summary>
+                  <p className="mt-1 text-xs text-stone-500">
+                    {sp.castingTime} • {sp.range} • {sp.components} • {sp.duration}
+                  </p>
+                  <p className="mt-1 text-xs text-stone-500">{sp.description}</p>
+                </details>
               )}
             </div>
           );

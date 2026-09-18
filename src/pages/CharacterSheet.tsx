@@ -25,6 +25,8 @@ import {
 } from '../lib/calc';
 import { generateCharacterSheetPdf } from '../lib/pdfExport';
 import { characterToExportFile, downloadJson, slugFilename } from '../lib/jsonExport';
+import { totalValueInGp, autoExchange, formatGp } from '../lib/currency';
+import { itemDescription } from '../lib/itemSummary';
 import { v4 as uuid } from 'uuid';
 
 const TABS = ['Main', 'Combat', 'Spells', 'Inventory', 'Features', 'Bio'] as const;
@@ -443,13 +445,14 @@ function SpellsTab({
   const spellcasting = getSpellcastingClasses(character, compendium);
   const slots = getSpellSlots(character, compendium);
   const pact = getPactMagicSlots(character, compendium);
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
 
   if (spellcasting.length === 0) {
     return <p className="text-stone-500">This character has no spellcasting classes.</p>;
   }
 
-  function setSlotUsed(level: number, used: number) {
-    update({ spellSlotsUsed: { ...character.spellSlotsUsed, [level]: Math.max(0, used) } });
+  function setSlotUsed(level: number, used: number, total: number) {
+    update({ spellSlotsUsed: { ...character.spellSlotsUsed, [level]: Math.min(total, Math.max(0, used)) } });
   }
 
   const known = character.spellsKnown.map((k) => compendium.spells[k]).filter(Boolean);
@@ -480,13 +483,21 @@ function SpellsTab({
                 <div key={level} className="stat-box px-3">
                   <span className="text-xs uppercase text-stone-500">Level {level}</span>
                   <div className="flex items-center gap-1">
-                    <button className="btn-ghost px-2" onClick={() => setSlotUsed(level, used - 1)}>
+                    <button
+                      className="stepper-btn"
+                      title="Spend a slot"
+                      onClick={() => setSlotUsed(level, used + 1, total)}
+                    >
                       −
                     </button>
-                    <span>
+                    <span className="w-12 text-center tabular-nums">
                       {total - used}/{total}
                     </span>
-                    <button className="btn-ghost px-2" onClick={() => setSlotUsed(level, used + 1)}>
+                    <button
+                      className="stepper-btn"
+                      title="Restore a slot"
+                      onClick={() => setSlotUsed(level, used - 1, total)}
+                    >
                       +
                     </button>
                   </div>
@@ -503,13 +514,21 @@ function SpellsTab({
           <div className="stat-box inline-flex px-3">
             <span className="text-xs uppercase text-stone-500">Level {pact.slotLevel} Slots</span>
             <div className="flex items-center gap-1">
-              <button className="btn-ghost px-2" onClick={() => update({ pactSlotsUsed: Math.max(0, character.pactSlotsUsed - 1) })}>
+              <button
+                className="stepper-btn"
+                title="Spend a slot"
+                onClick={() => update({ pactSlotsUsed: Math.min(pact.slots, character.pactSlotsUsed + 1) })}
+              >
                 −
               </button>
-              <span>
+              <span className="w-12 text-center tabular-nums">
                 {pact.slots - character.pactSlotsUsed}/{pact.slots}
               </span>
-              <button className="btn-ghost px-2" onClick={() => update({ pactSlotsUsed: character.pactSlotsUsed + 1 })}>
+              <button
+                className="stepper-btn"
+                title="Restore a slot"
+                onClick={() => update({ pactSlotsUsed: Math.max(0, character.pactSlotsUsed - 1) })}
+              >
                 +
               </button>
             </div>
@@ -524,24 +543,45 @@ function SpellsTab({
           .map((level) => (
             <div key={level}>
               <p className="mb-1 text-sm font-bold">{level === 0 ? 'Cantrips' : `Level ${level}`}</p>
-              <div className="space-y-1">
-                {byLevel.get(level)!.map((sp) => (
-                  <label key={sp.key} className="flex items-center gap-2 text-sm">
-                    <input
-                      type="checkbox"
-                      checked={character.spellsPrepared.includes(sp.key)}
-                      onChange={() =>
-                        update({
-                          spellsPrepared: character.spellsPrepared.includes(sp.key)
-                            ? character.spellsPrepared.filter((k) => k !== sp.key)
-                            : [...character.spellsPrepared, sp.key],
-                        })
-                      }
-                    />
-                    <span className="font-medium">{sp.name}</span>
-                    <span className="text-xs text-stone-500">{sp.concentration ? 'Concentration' : ''}</span>
-                  </label>
-                ))}
+              <div className="space-y-1.5">
+                {byLevel.get(level)!.map((sp) => {
+                  const isOpen = !!expanded[sp.key];
+                  return (
+                    <div key={sp.key} className="item-row">
+                      <div className="flex flex-wrap items-center gap-2 px-3 py-1.5 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={character.spellsPrepared.includes(sp.key)}
+                          onChange={() =>
+                            update({
+                              spellsPrepared: character.spellsPrepared.includes(sp.key)
+                                ? character.spellsPrepared.filter((k) => k !== sp.key)
+                                : [...character.spellsPrepared, sp.key],
+                            })
+                          }
+                        />
+                        <button
+                          className="flex flex-1 items-center gap-2 text-left"
+                          onClick={() => setExpanded((e) => ({ ...e, [sp.key]: !e[sp.key] }))}
+                        >
+                          <span className="item-expand-btn">{isOpen ? '▾' : '▸'}</span>
+                          <span className="font-medium">{sp.name}</span>
+                        </button>
+                        <span className="pill">{sp.school}</span>
+                        {sp.concentration && <span className="pill">Concentration</span>}
+                        {sp.ritual && <span className="pill">Ritual</span>}
+                      </div>
+                      {isOpen && (
+                        <div className="border-t border-stone-200 px-3 py-3 text-sm dark:border-stone-800">
+                          <p className="mb-2 text-xs text-stone-500">
+                            {sp.castingTime} • {sp.range} • {sp.components} • {sp.duration}
+                          </p>
+                          <p className="text-stone-600 dark:text-stone-300">{sp.description || 'No description available.'}</p>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           ))}
@@ -559,6 +599,8 @@ function InventoryTab({
   update: (p: Partial<Character>) => void;
   compendium: ReturnType<typeof useCompendium>['compendium'];
 }) {
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+
   function patchItem(id: string, patch: Partial<InventoryEntry>) {
     update({ inventory: character.inventory.map((i) => (i.id === id ? { ...i, ...patch } : i)) });
   }
@@ -569,6 +611,9 @@ function InventoryTab({
     if (!itemKey) return;
     update({ inventory: [...character.inventory, { id: uuid(), itemKey, quantity: 1, equipped: false, attuned: false }] });
   }
+  function toggleExpanded(id: string) {
+    setExpanded((e) => ({ ...e, [id]: !e[id] }));
+  }
 
   const totalWeight = character.inventory.reduce((sum, inv) => {
     const item = inv.itemKey ? compendium.items[inv.itemKey] : undefined;
@@ -577,8 +622,14 @@ function InventoryTab({
 
   return (
     <div>
-      <div className="mb-4 flex flex-wrap items-end gap-3">
-        <div className="flex-1">
+      <MoneyManager character={character} update={update} />
+
+      <div className="mb-4 mt-6 flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h3 className="section-title">Items</h3>
+          <p className="text-sm text-stone-500">Total weight: {totalWeight} lb</p>
+        </div>
+        <div className="w-full sm:w-72">
           <label className="label">Add Item</label>
           <select className="input" value="" onChange={(e) => addItem(e.target.value)}>
             <option value="">Choose an item…</option>
@@ -591,54 +642,114 @@ function InventoryTab({
               ))}
           </select>
         </div>
-        <div className="grid grid-cols-5 gap-2">
-          {(['pp', 'gp', 'ep', 'sp', 'cp'] as const).map((c) => (
-            <div key={c}>
-              <label className="label">{c.toUpperCase()}</label>
-              <input
-                type="number"
-                className="input w-16"
-                value={character.currency[c]}
-                onChange={(e) => update({ currency: { ...character.currency, [c]: Number(e.target.value) || 0 } })}
-              />
-            </div>
-          ))}
-        </div>
       </div>
 
-      <p className="mb-2 text-sm text-stone-500">Total weight: {totalWeight} lb</p>
-
-      <div className="space-y-1">
+      <div className="space-y-2">
         {character.inventory.map((inv) => {
           const item = inv.itemKey ? compendium.items[inv.itemKey] : undefined;
+          const isOpen = !!expanded[inv.id];
           return (
-            <div key={inv.id} className="flex flex-wrap items-center gap-2 rounded-lg border border-stone-300 px-2 py-1.5 text-sm dark:border-stone-700">
-              <span className="min-w-40 flex-1 font-medium">{item?.name ?? inv.customName}</span>
-              {item?.type && <span className="text-xs text-stone-500">{item.type}</span>}
-              <input
-                type="number"
-                min={1}
-                className="input w-16"
-                value={inv.quantity}
-                onChange={(e) => patchItem(inv.id, { quantity: Number(e.target.value) || 1 })}
-              />
-              <label className="flex items-center gap-1 text-xs">
-                <input type="checkbox" checked={inv.equipped} onChange={() => patchItem(inv.id, { equipped: !inv.equipped })} />
-                Equipped
-              </label>
-              {item?.requiresAttunement && (
+            <div key={inv.id} className="item-row">
+              <div className="flex flex-wrap items-center gap-2 px-3 py-2 text-sm">
+                <button
+                  className="item-expand-btn"
+                  onClick={() => toggleExpanded(inv.id)}
+                  aria-label={isOpen ? 'Collapse details' : 'Expand details'}
+                  title="Description & notes"
+                >
+                  {isOpen ? '▾' : '▸'}
+                </button>
+                <span className="min-w-40 flex-1 font-medium">{item?.name ?? inv.customName}</span>
+                {item?.type && <span className="pill">{item.type}</span>}
+                <input
+                  type="number"
+                  min={1}
+                  className="input w-16"
+                  value={inv.quantity}
+                  onChange={(e) => patchItem(inv.id, { quantity: Number(e.target.value) || 1 })}
+                />
                 <label className="flex items-center gap-1 text-xs">
-                  <input type="checkbox" checked={inv.attuned} onChange={() => patchItem(inv.id, { attuned: !inv.attuned })} />
-                  Attuned
+                  <input type="checkbox" checked={inv.equipped} onChange={() => patchItem(inv.id, { equipped: !inv.equipped })} />
+                  Equipped
                 </label>
+                {item?.requiresAttunement && (
+                  <label className="flex items-center gap-1 text-xs">
+                    <input type="checkbox" checked={inv.attuned} onChange={() => patchItem(inv.id, { attuned: !inv.attuned })} />
+                    Attuned
+                  </label>
+                )}
+                <button className="btn-danger" onClick={() => removeItem(inv.id)}>
+                  Remove
+                </button>
+              </div>
+              {isOpen && (
+                <div className="border-t border-stone-200 px-3 py-3 text-sm dark:border-stone-800">
+                  <p className="mb-3 text-stone-500">{item ? itemDescription(item) : 'Custom item — no compendium entry.'}</p>
+                  <label className="label">Notes</label>
+                  <textarea
+                    className="input"
+                    rows={2}
+                    placeholder="e.g. found in the dragon's hoard, +1 once identified…"
+                    value={inv.notes ?? ''}
+                    onChange={(e) => patchItem(inv.id, { notes: e.target.value })}
+                  />
+                </div>
               )}
-              <button className="btn-danger" onClick={() => removeItem(inv.id)}>
-                Remove
-              </button>
             </div>
           );
         })}
         {character.inventory.length === 0 && <p className="text-stone-500">No items yet.</p>}
+      </div>
+    </div>
+  );
+}
+
+function MoneyManager({ character, update }: { character: Character; update: (p: Partial<Character>) => void }) {
+  const denominations = ['pp', 'gp', 'ep', 'sp', 'cp'] as const;
+  const totalGp = totalValueInGp(character.currency);
+
+  function step(coin: (typeof denominations)[number], delta: number) {
+    update({ currency: { ...character.currency, [coin]: Math.max(0, character.currency[coin] + delta) } });
+  }
+
+  return (
+    <div className="money-card">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <h3 className="section-title mb-0">Money</h3>
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-stone-500">
+            ≈ <strong className="text-stone-700 dark:text-stone-200">{formatGp(totalGp)} gp</strong> total
+          </span>
+          <button
+            className="btn-secondary"
+            title="Convert 10 cp → 1 sp, 10 sp → 1 gp, 10 gp → 1 pp"
+            onClick={() => update({ currency: autoExchange(character.currency) })}
+          >
+            Auto-Exchange
+          </button>
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+        {denominations.map((coin) => (
+          <div key={coin} className="coin-box">
+            <span className="coin-label">{coin.toUpperCase()}</span>
+            <div className="flex items-center justify-center gap-1.5">
+              <button className="stepper-btn" title={`Remove 1 ${coin}`} onClick={() => step(coin, -1)}>
+                −
+              </button>
+              <input
+                type="number"
+                min={0}
+                className="coin-input"
+                value={character.currency[coin]}
+                onChange={(e) => update({ currency: { ...character.currency, [coin]: Math.max(0, Number(e.target.value) || 0) } })}
+              />
+              <button className="stepper-btn" title={`Add 1 ${coin}`} onClick={() => step(coin, 1)}>
+                +
+              </button>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );

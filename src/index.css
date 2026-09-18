@@ -1,5 +1,13 @@
 @import "tailwindcss";
 
+/*
+ * Tailwind v4 defaults every `dark:` utility to the OS-level
+ * `prefers-color-scheme` media query. This app toggles a `.dark` class on
+ * <html> instead (see useUiStore / App.tsx), so `dark:` variants need to be
+ * repointed at that class or none of them ever actually apply.
+ */
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
   color-scheme: light dark;
 }
@@ -9,62 +17,138 @@ html.dark {
 }
 
 body {
-  @apply bg-stone-100 text-stone-900 dark:bg-stone-950 dark:text-stone-100;
+  @apply text-stone-900 dark:text-stone-100;
   font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  background-color: #f4f1ec;
+  background-image: radial-gradient(circle at 15% 0%, rgba(153, 27, 27, 0.06), transparent 45%),
+    radial-gradient(circle at 100% 20%, rgba(120, 53, 15, 0.05), transparent 40%);
+  background-attachment: fixed;
 }
 
-.card {
-  @apply rounded-xl border border-stone-300/60 bg-white shadow-sm dark:border-stone-700/60 dark:bg-stone-900;
+html.dark body {
+  background-color: #0b0a0c;
+  background-image: radial-gradient(circle at 15% 0%, rgba(153, 27, 27, 0.14), transparent 45%),
+    radial-gradient(circle at 100% 20%, rgba(120, 53, 15, 0.1), transparent 40%);
 }
 
-.btn,
-.btn-primary,
-.btn-secondary,
-.btn-ghost,
-.btn-danger {
-  @apply inline-flex items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50;
+::selection {
+  @apply bg-red-800/20;
 }
 
-.btn-primary {
-  @apply bg-red-800 text-white hover:bg-red-700;
+/* Scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: theme(colors.stone.400) transparent;
+}
+html.dark * {
+  scrollbar-color: theme(colors.stone.700) transparent;
 }
 
-.btn-secondary {
-  @apply bg-stone-200 text-stone-800 hover:bg-stone-300 dark:bg-stone-800 dark:text-stone-100 dark:hover:bg-stone-700;
-}
+/*
+ * Component classes live in Tailwind's `components` layer (lower precedence
+ * than `utilities`), so a one-off utility passed alongside one of these in a
+ * className (e.g. "input w-16", "section-title mb-0") still wins as expected.
+ */
+@layer components {
+  .card {
+    @apply rounded-2xl border border-stone-300/50 bg-white/90 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_8px_24px_-12px_rgba(0,0,0,0.12)] backdrop-blur-sm transition-shadow dark:border-stone-800 dark:bg-stone-900/90 dark:shadow-[0_1px_2px_rgba(0,0,0,0.2),0_8px_24px_-12px_rgba(0,0,0,0.5)];
+  }
 
-.btn-ghost {
-  @apply text-stone-600 hover:bg-stone-200 dark:text-stone-300 dark:hover:bg-stone-800;
-}
+  .btn,
+  .btn-primary,
+  .btn-secondary,
+  .btn-ghost,
+  .btn-danger {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-all duration-150 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100;
+  }
 
-.btn-danger {
-  @apply bg-red-900/10 text-red-800 hover:bg-red-900/20 dark:bg-red-500/10 dark:text-red-400 dark:hover:bg-red-500/20;
-}
+  .btn-primary {
+    @apply bg-gradient-to-b from-red-700 to-red-800 text-white shadow-sm shadow-red-950/30 hover:from-red-600 hover:to-red-700 hover:shadow-md hover:shadow-red-950/40;
+  }
 
-.input {
-  @apply w-full rounded-lg border border-stone-300 bg-white px-2.5 py-1.5 text-sm text-stone-900 focus:border-red-700 focus:outline-none focus:ring-1 focus:ring-red-700 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100;
-}
+  .btn-secondary {
+    @apply bg-stone-200 text-stone-800 shadow-sm hover:bg-stone-300 dark:bg-stone-800 dark:text-stone-100 dark:hover:bg-stone-700;
+  }
 
-.label {
-  @apply mb-1 block text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400;
-}
+  .btn-ghost {
+    @apply text-stone-600 hover:bg-stone-900/5 dark:text-stone-300 dark:hover:bg-white/5;
+  }
 
-.section-title {
-  @apply mb-2 text-sm font-bold uppercase tracking-wide text-red-800 dark:text-red-400;
-}
+  .btn-danger {
+    @apply bg-red-900/10 text-red-800 hover:bg-red-900/20 dark:bg-red-500/10 dark:text-red-400 dark:hover:bg-red-500/20;
+  }
 
-.stat-box {
-  @apply flex flex-col items-center justify-center rounded-lg border border-stone-300 bg-stone-50 py-2 dark:border-stone-700 dark:bg-stone-800/60;
-}
+  .input {
+    @apply w-full rounded-lg border border-stone-300 bg-white px-2.5 py-1.5 text-sm text-stone-900 transition-shadow focus:border-red-700 focus:outline-none focus:ring-2 focus:ring-red-700/20 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100;
+  }
 
-.tab-btn {
-  @apply rounded-t-lg border border-b-0 border-stone-300 px-3 py-1.5 text-sm font-medium text-stone-500 dark:border-stone-700 dark:text-stone-400;
-}
+  .label {
+    @apply mb-1 block text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400;
+  }
 
-.tab-btn-active {
-  @apply bg-white text-red-800 dark:bg-stone-900 dark:text-red-400;
-}
+  .section-title {
+    @apply mb-2 flex items-center gap-1.5 text-sm font-bold uppercase tracking-wide text-red-800 dark:text-red-400;
+  }
 
-.tab-btn-inactive {
-  @apply bg-stone-200/60 hover:text-stone-800 dark:bg-stone-800/40 dark:hover:text-stone-200;
+  .section-title::before {
+    content: '';
+    @apply h-3 w-1 rounded-full bg-red-800 dark:bg-red-400;
+  }
+
+  .stat-box {
+    @apply flex flex-col items-center justify-center rounded-xl border border-stone-300/70 bg-gradient-to-b from-stone-50 to-stone-100/60 py-2 shadow-sm transition-transform hover:-translate-y-0.5 hover:shadow-md dark:border-stone-700/70 dark:from-stone-800/70 dark:to-stone-800/30;
+  }
+
+  .tab-btn {
+    @apply rounded-t-lg border border-b-0 border-stone-300/70 px-3 py-1.5 text-sm font-medium text-stone-500 transition-colors dark:border-stone-800 dark:text-stone-400;
+  }
+
+  .tab-btn-active {
+    @apply relative bg-white text-red-800 shadow-[0_-2px_8px_rgba(0,0,0,0.04)] dark:bg-stone-900 dark:text-red-400;
+  }
+
+  .tab-btn-active::after {
+    content: '';
+    @apply absolute inset-x-0 -bottom-px h-0.5 bg-red-700 dark:bg-red-500;
+  }
+
+  .tab-btn-inactive {
+    @apply bg-stone-200/50 hover:bg-stone-200/80 hover:text-stone-800 dark:bg-stone-900/40 dark:hover:bg-stone-800/60 dark:hover:text-stone-200;
+  }
+
+  /* Small rounded status/type badge, e.g. item type, spell school, tags */
+  .pill {
+    @apply rounded-full bg-stone-200/80 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-stone-600 dark:bg-stone-800 dark:text-stone-300;
+  }
+
+  /* A collapsible row: item/spell name + controls, with an optional expanded detail panel below */
+  .item-row {
+    @apply overflow-hidden rounded-xl border border-stone-300/70 bg-white/60 transition-colors hover:border-stone-400/70 dark:border-stone-800 dark:bg-stone-900/40 dark:hover:border-stone-700;
+  }
+
+  .item-expand-btn {
+    @apply flex h-5 w-5 shrink-0 items-center justify-center rounded text-stone-400 transition-colors hover:bg-stone-900/5 hover:text-stone-700 dark:hover:bg-white/5 dark:hover:text-stone-200;
+  }
+
+  /* Round +/- stepper button used for slots, coins, ability scores */
+  .stepper-btn {
+    @apply flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-stone-300 text-sm font-bold leading-none text-stone-600 transition-all hover:border-red-700 hover:bg-red-700 hover:text-white active:scale-90 dark:border-stone-600 dark:text-stone-300;
+  }
+
+  .money-card {
+    @apply rounded-2xl border border-amber-800/20 bg-gradient-to-br from-amber-50 to-stone-50 p-4 shadow-sm dark:border-amber-500/15 dark:from-amber-950/20 dark:to-stone-900/40;
+  }
+
+  .coin-box {
+    @apply flex flex-col items-center gap-1 rounded-xl border border-stone-300/60 bg-white/70 py-2.5 dark:border-stone-700/60 dark:bg-stone-900/40;
+  }
+
+  .coin-label {
+    @apply text-[10px] font-bold uppercase tracking-wider text-stone-500 dark:text-stone-400;
+  }
+
+  .coin-input {
+    @apply w-12 rounded-md border border-stone-300 bg-white py-1 text-center text-sm font-semibold text-stone-900 focus:border-red-700 focus:outline-none focus:ring-2 focus:ring-red-700/20 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100;
+  }
 }
