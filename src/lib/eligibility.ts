@@ -1,6 +1,6 @@
 import type { Character } from '../types/character';
 import type { Compendium, Item, Feat } from '../types/compendium';
-import { getSpellSlots, getPactMagicSlots, getSpellcastingClasses } from './calc';
+import { getSpellSlots, getPactMagicSlots, getSpellcastingClasses, getAbilityModifiers } from './calc';
 
 /**
  * Weapon/armor/tool proficiencies from the character's classes, merged with
@@ -48,6 +48,10 @@ function proficiencyMatchesName(proficiency: string, itemName: string): boolean 
  * Gear, consumables, and other non-proficiency-gated items always pass.
  */
 export function isProficientWithItem(character: Character, compendium: Compendium, item: Item): boolean {
+  // Homebrew/custom items rarely match a standard proficiency string by name
+  // (that's the whole point of homebrew), so the filter would otherwise hide
+  // a player's own custom content by default right after they add it.
+  if (item.source.origin === 'custom') return true;
   const profs = effectiveProficiencies(character, compendium);
   if (item.type === 'weapon') {
     return profs.weaponProficiencies.some((p) => {
@@ -104,4 +108,36 @@ export function getMaxAvailableSpellLevel(character: Character, compendium: Comp
   });
 
   return { maxLevel, hasCantrips };
+}
+
+export interface SpellCounts {
+  cantripLimit: number;
+  spellLimit: number;
+}
+
+/**
+ * How many cantrips and leveled spells the character is actually allowed to
+ * know right now, summed across every spellcasting class they have. "Known"
+ * casters (Bard/Ranger/Sorcerer/Warlock) use their fixed known-spells table;
+ * prepared casters (Cleric/Druid/Paladin/Wizard) use the standard "level +
+ * ability modifier" prepared-spell formula as the equivalent cap here, since
+ * this app tracks a single flat "spells known" list rather than a separate
+ * prepared-each-day mechanic.
+ */
+export function getSpellCounts(character: Character, compendium: Compendium): SpellCounts {
+  const mods = getAbilityModifiers(character, compendium);
+  let cantripLimit = 0;
+  let spellLimit = 0;
+  for (const cl of character.classes) {
+    const cls = compendium.classes[cl.classKey];
+    const sc = cls?.spellcasting;
+    if (!sc) continue;
+    cantripLimit += sc.cantripsKnown?.[cl.level - 1] ?? 0;
+    if (sc.spellsKnownTable) {
+      spellLimit += sc.spellsKnownTable[cl.level - 1] ?? 0;
+    } else if (sc.preparedCasterAbilityMod) {
+      spellLimit += Math.max(1, cl.level + mods[sc.ability]);
+    }
+  }
+  return { cantripLimit, spellLimit };
 }

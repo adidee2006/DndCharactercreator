@@ -27,7 +27,7 @@ import { generateCharacterSheetPdf } from '../lib/pdfExport';
 import { characterToExportFile, downloadJson, slugFilename } from '../lib/jsonExport';
 import { totalValueInGp, autoExchange, formatGp } from '../lib/currency';
 import { itemDescription } from '../lib/itemSummary';
-import { isProficientWithItem, isEligibleForFeat } from '../lib/eligibility';
+import { isProficientWithItem, isEligibleForFeat, getMaxAvailableSpellLevel, getSpellCounts } from '../lib/eligibility';
 import { fightingStyles, fightingStylesByKey } from '../data/srd/fightingStyles';
 import { v4 as uuid } from 'uuid';
 
@@ -469,6 +469,7 @@ function SpellsTab({
   const slots = getSpellSlots(character, compendium);
   const pact = getPactMagicSlots(character, compendium);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const [showAllLevels, setShowAllLevels] = useState(false);
 
   if (spellcasting.length === 0) {
     return <p className="text-stone-500">This character has no spellcasting classes.</p>;
@@ -482,6 +483,22 @@ function SpellsTab({
   const byLevel = new Map<number, typeof known>();
   for (const sp of known) byLevel.set(sp.level, [...(byLevel.get(sp.level) ?? []), sp]);
 
+  const classKeys = character.classes.map((c) => c.classKey);
+  const { maxLevel } = getMaxAvailableSpellLevel(character, compendium);
+  const { cantripLimit, spellLimit } = getSpellCounts(character, compendium);
+  const cantripsUsed = known.filter((sp) => sp.level === 0).length;
+  const spellsUsed = known.filter((sp) => sp.level > 0).length;
+  const learnableSpells = Object.values(compendium.spells)
+    .filter((sp) => sp.classes.some((c) => classKeys.includes(c)))
+    .filter((sp) => !character.spellsKnown.includes(sp.key))
+    .filter((sp) => showAllLevels || sp.level === 0 || sp.level <= maxLevel)
+    .sort((a, b) => a.level - b.level || a.name.localeCompare(b.name));
+
+  function learnSpell(key: string) {
+    if (!key) return;
+    update({ spellsKnown: [...character.spellsKnown, key] });
+  }
+
   return (
     <div>
       <div className="mb-4 flex flex-wrap gap-4">
@@ -492,6 +509,33 @@ function SpellsTab({
             <span className="text-sm">Attack {formatModifier(sc.attackBonus)}</span>
           </div>
         ))}
+      </div>
+
+      <div className="money-card mb-4">
+        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+          <h3 className="section-title mb-0">Learn a New Spell</h3>
+          <label className="flex items-center gap-1 text-xs text-stone-500">
+            <input type="checkbox" checked={showAllLevels} onChange={(e) => setShowAllLevels(e.target.checked)} />
+            Show levels above what I can cast yet
+          </label>
+        </div>
+        <select className="input" value="" onChange={(e) => learnSpell(e.target.value)}>
+          <option value="">Choose a spell to add…</option>
+          {learnableSpells.map((sp) => (
+            <option key={sp.key} value={sp.key}>
+              {sp.name} ({sp.level === 0 ? 'Cantrip' : `Lv ${sp.level}`})
+            </option>
+          ))}
+        </select>
+        <p className="mt-1.5 text-xs text-stone-500">
+          <span className={cantripsUsed > cantripLimit ? 'font-semibold text-red-700 dark:text-red-400' : ''}>
+            Cantrips known: {cantripsUsed}/{cantripLimit}
+          </span>
+          {'  •  '}
+          <span className={spellsUsed > spellLimit ? 'font-semibold text-red-700 dark:text-red-400' : ''}>
+            Spells known: {spellsUsed}/{spellLimit}
+          </span>
+        </p>
       </div>
 
       {slots.length > 0 && (

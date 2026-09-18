@@ -16,7 +16,7 @@ import {
 } from '../lib/abilityGeneration';
 import { getFinalAbilityScores, abilityModifier, formatModifier, getSpellcastingClasses, getHitPointsMax } from '../lib/calc';
 import { itemDescription } from '../lib/itemSummary';
-import { isProficientWithItem, getMaxAvailableSpellLevel } from '../lib/eligibility';
+import { isProficientWithItem, getMaxAvailableSpellLevel, getSpellCounts } from '../lib/eligibility';
 import { fightingStyles, fightingStylesByKey } from '../data/srd/fightingStyles';
 
 const STEPS = ['Basics', 'Race', 'Class', 'Abilities', 'Skills', 'Equipment', 'Spells', 'Review'] as const;
@@ -825,6 +825,10 @@ function SpellsStep({
 
   const classKeys = character.classes.map((c) => c.classKey);
   const { maxLevel } = getMaxAvailableSpellLevel(character, compendium);
+  const { cantripLimit, spellLimit } = getSpellCounts(character, compendium);
+  const knownSpellObjs = character.spellsKnown.map((k) => compendium.spells[k]).filter(Boolean);
+  const cantripsUsed = knownSpellObjs.filter((sp) => sp.level === 0).length;
+  const spellsUsed = knownSpellObjs.filter((sp) => sp.level > 0).length;
   const availableSpells = Object.values(compendium.spells)
     .filter((sp) => sp.classes.some((c) => classKeys.includes(c)))
     .filter((sp) => showAllLevels || sp.level === 0 || sp.level <= maxLevel)
@@ -832,6 +836,11 @@ function SpellsStep({
 
   function toggleKnown(key: string) {
     const known = character.spellsKnown.includes(key);
+    const sp = compendium.spells[key];
+    if (!known && sp) {
+      const atLimit = sp.level === 0 ? cantripsUsed >= cantripLimit : spellsUsed >= spellLimit;
+      if (atLimit) return;
+    }
     update({
       spellsKnown: known ? character.spellsKnown.filter((k) => k !== key) : [...character.spellsKnown, key],
       spellsPrepared: known ? character.spellsPrepared.filter((k) => k !== key) : character.spellsPrepared,
@@ -860,15 +869,26 @@ function SpellsStep({
           Showing cantrips{maxLevel > 0 ? ` and levels 1–${maxLevel}` : ''} — the highest this character can currently cast.
         </p>
       )}
+      <p className="mb-2 text-sm">
+        <span className={cantripsUsed >= cantripLimit ? 'font-semibold text-red-700 dark:text-red-400' : ''}>
+          Cantrips: {cantripsUsed}/{cantripLimit}
+        </span>
+        {'  •  '}
+        <span className={spellsUsed >= spellLimit ? 'font-semibold text-red-700 dark:text-red-400' : ''}>
+          Spells known: {spellsUsed}/{spellLimit}
+        </span>
+      </p>
       <div className="max-h-[28rem] space-y-1 overflow-y-auto pr-1">
         {availableSpells.map((sp) => {
           const known = character.spellsKnown.includes(sp.key);
           const prepared = character.spellsPrepared.includes(sp.key);
+          const atLimit = sp.level === 0 ? cantripsUsed >= cantripLimit : spellsUsed >= spellLimit;
+          const disabled = !known && atLimit;
           return (
-            <div key={sp.key} className="item-row px-2 py-1.5 text-sm">
+            <div key={sp.key} className={`item-row px-2 py-1.5 text-sm ${disabled ? 'opacity-50' : ''}`}>
               <div className="flex items-center gap-2">
               <label className="flex flex-1 items-center gap-2">
-                <input type="checkbox" checked={known} onChange={() => toggleKnown(sp.key)} />
+                <input type="checkbox" checked={known} disabled={disabled} onChange={() => toggleKnown(sp.key)} />
                 <span className="font-medium">{sp.name}</span>
                 <span className="text-xs text-stone-500">{sp.level === 0 ? 'Cantrip' : `Lv ${sp.level}`}</span>
               </label>

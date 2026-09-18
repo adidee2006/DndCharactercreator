@@ -302,6 +302,40 @@ export interface CustomImportResult {
   warnings: string[];
 }
 
+function slugify(s: string): string {
+  return (
+    s
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '') || 'entry'
+  );
+}
+
+/**
+ * Accepts a category either as the documented shape (object keyed by slug)
+ * or as a plain array of entries (a very natural mistake to make writing
+ * homebrew JSON by hand) and normalizes to the keyed form, slugifying each
+ * entry's name for a key when one isn't already provided.
+ */
+function normalizeCategory<T extends { key?: string; name?: string }>(
+  value: unknown,
+): Record<string, T> | undefined {
+  if (!value) return undefined;
+  if (Array.isArray(value)) {
+    const out: Record<string, T> = {};
+    const seen = new Map<string, number>();
+    for (const entry of value as T[]) {
+      const base = entry.key ?? slugify(entry.name ?? 'entry');
+      const n = seen.get(base) ?? 0;
+      seen.set(base, n + 1);
+      out[n === 0 ? base : `${base}-${n}`] = entry;
+    }
+    return out;
+  }
+  if (typeof value === 'object') return value as Record<string, T>;
+  return undefined;
+}
+
 function withDefaults<T extends { key?: string; name: string }>(
   entryKey: string,
   raw: T,
@@ -315,22 +349,48 @@ function withDefaults<T extends { key?: string; name: string }>(
  * Validates and stores a user-supplied custom/homebrew compendium (parsed
  * JSON matching CustomCompendiumInput). Entries are upserted by key, so a
  * custom entry can either add new content or override bundled/remote data.
+ * Tolerant of a few common shape mistakes (arrays instead of keyed objects)
+ * and throws a clear, specific error when the file doesn't match anything
+ * recognizable, rather than silently importing nothing.
  */
-export async function importCustomCompendium(input: CustomCompendiumInput): Promise<CustomImportResult> {
+export async function importCustomCompendium(rawInput: unknown): Promise<CustomImportResult> {
+  if (!rawInput || typeof rawInput !== 'object' || Array.isArray(rawInput)) {
+    throw new Error(
+      'Expected a JSON object with one or more of these top-level keys: races, classes, backgrounds, feats, spells, items. ' +
+        (Array.isArray(rawInput)
+          ? 'Got a JSON array instead — wrap it as, e.g., { "items": [ ...your array... ] }.'
+          : 'Got something else instead.'),
+    );
+  }
+
+  const input = rawInput as Record<string, unknown>;
+  const races = normalizeCategory<Partial<Race> & { name: string }>(input.races);
+  const classes = normalizeCategory<Partial<DndClass> & { name: string }>(input.classes);
+  const backgrounds = normalizeCategory<Partial<Background> & { name: string }>(input.backgrounds);
+  const feats = normalizeCategory<Partial<Feat> & { name: string }>(input.feats);
+  const spells = normalizeCategory<Partial<Spell> & { name: string }>(input.spells);
+  const items = normalizeCategory<Partial<Item> & { name: string }>(input.items);
+
+  if (!races && !classes && !backgrounds && !feats && !spells && !items) {
+    throw new Error(
+      'No recognized categories found in this file. Expected one or more of: races, classes, backgrounds, feats, spells, items — each either an object keyed by a short id, or an array of entries.',
+    );
+  }
+
   const warnings: string[] = [];
-  const label = input.label?.trim() || 'Custom Compendium';
+  const label = typeof input.label === 'string' && input.label.trim() ? input.label.trim() : 'Custom Compendium';
   const source: SourceInfo = { origin: 'custom', label };
   const counts: Record<CategoryKey, number> = { races: 0, classes: 0, backgrounds: 0, feats: 0, spells: 0, items: 0 };
 
-  if (input.races) {
-    const rows = Object.entries(input.races).map(([k, v]) =>
+  if (races) {
+    const rows = Object.entries(races).map(([k, v]) =>
       withDefaults(k, v, source, { size: 'Medium', speed: 30, abilityBonuses: [], traits: [], languages: [] }),
     );
     await db.races.bulkPut(rows as Race[]);
     counts.races = rows.length;
   }
-  if (input.classes) {
-    const rows = Object.entries(input.classes).map(([k, v]) => {
+  if (classes) {
+    const rows = Object.entries(classes).map(([k, v]) => {
       if (!v.hitDie) warnings.push(`Class "${v.name ?? k}" has no hitDie; defaulting to d8.`);
       return withDefaults(k, v, source, {
         hitDie: 8,
@@ -349,8 +409,8 @@ export async function importCustomCompendium(input: CustomCompendiumInput): Prom
     await db.classes.bulkPut(rows as DndClass[]);
     counts.classes = rows.length;
   }
-  if (input.backgrounds) {
-    const rows = Object.entries(input.backgrounds).map(([k, v]) =>
+  if (backgrounds) {
+    const rows = Object.entries(backgrounds).map(([k, v]) =>
       withDefaults(k, v, source, {
         skillProficiencies: [],
         toolProficiencies: [],
@@ -362,13 +422,13 @@ export async function importCustomCompendium(input: CustomCompendiumInput): Prom
     await db.backgrounds.bulkPut(rows as Background[]);
     counts.backgrounds = rows.length;
   }
-  if (input.feats) {
-    const rows = Object.entries(input.feats).map(([k, v]) => withDefaults(k, v, source, { description: '' }));
+  if (feats) {
+    const rows = Object.entries(feats).map(([k, v]) => withDefaults(k, v, source, { description: '' }));
     await db.feats.bulkPut(rows as Feat[]);
     counts.feats = rows.length;
   }
-  if (input.spells) {
-    const rows = Object.entries(input.spells).map(([k, v]) =>
+  if (spells) {
+    const rows = Object.entries(spells).map(([k, v]) =>
       withDefaults(k, v, source, {
         level: 0,
         school: 'Evocation',
@@ -385,8 +445,8 @@ export async function importCustomCompendium(input: CustomCompendiumInput): Prom
     await db.spells.bulkPut(rows as Spell[]);
     counts.spells = rows.length;
   }
-  if (input.items) {
-    const rows = Object.entries(input.items).map(([k, v]) => withDefaults(k, v, source, { type: 'gear' }));
+  if (items) {
+    const rows = Object.entries(items).map(([k, v]) => withDefaults(k, v, source, { type: 'gear' }));
     await db.items.bulkPut(rows as Item[]);
     counts.items = rows.length;
   }

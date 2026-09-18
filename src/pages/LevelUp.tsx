@@ -8,6 +8,7 @@ import type { AbilityKey } from '../types/compendium';
 import { getAbilityModifiers, getHitPointsMax, formatModifier } from '../lib/calc';
 import { asiLevelsForClass } from '../data/tables';
 import { fightingStyles, fightingStylesByKey } from '../data/srd/fightingStyles';
+import { getSpellCounts } from '../lib/eligibility';
 
 type AsiMode = 'none' | 'two-one' | 'one-two' | 'feat';
 
@@ -64,17 +65,17 @@ export default function LevelUp() {
   const manualGain = manualRoll + conMod;
   const currentMaxHp = getHitPointsMax(character, compendium);
 
-  // Spells: figure out if this class levels up spellcasting and whether it's a "known spells" caster
+  // Spells: how many additional cantrips/spells this level grants, for both
+  // "known spell" casters (fixed table) and "prepared" casters (Cleric,
+  // Druid, Paladin, Wizard — level + ability modifier formula), computed by
+  // diffing getSpellCounts before vs. after the level change so both caster
+  // types are handled the same way the creation wizard enforces them.
   const spellcasting = cls.spellcasting;
-  let newSpellsAllowed = 0;
-  if (spellcasting?.spellsKnownTable) {
-    const before = spellcasting.spellsKnownTable[current.level - 1] ?? 0;
-    const after = spellcasting.spellsKnownTable[newLevel - 1] ?? before;
-    newSpellsAllowed = Math.max(0, after - before);
-  }
-  const cantripsBefore = spellcasting?.cantripsKnown?.[current.level - 1] ?? 0;
-  const cantripsAfter = spellcasting?.cantripsKnown?.[newLevel - 1] ?? cantripsBefore;
-  const newCantripsAllowed = Math.max(0, cantripsAfter - cantripsBefore);
+  const countsBefore = getSpellCounts(character, compendium);
+  const hypotheticalClasses = character.classes.map((c, i) => (i === classIndex ? { ...c, level: newLevel } : c));
+  const countsAfter = getSpellCounts({ ...character, classes: hypotheticalClasses }, compendium);
+  const newSpellsAllowed = Math.max(0, countsAfter.spellLimit - countsBefore.spellLimit);
+  const newCantripsAllowed = Math.max(0, countsAfter.cantripLimit - countsBefore.cantripLimit);
   const availableSpells = spellcasting
     ? Object.values(compendium.spells)
         .filter((sp) => sp.classes.includes(current.classKey) && !character.spellsKnown.includes(sp.key))
