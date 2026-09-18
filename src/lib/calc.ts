@@ -145,9 +145,18 @@ export function getArmorClass(character: Character, compendium: Compendium): num
   if (shield) base += shield.armorClassBase ?? 2;
 
   // Defense fighting style: +1 AC while wearing armor (not while unarmored).
-  if (armor && character.fightingStyle === 'defense') base += 1;
+  if (armor && hasFightingStyle(character, 'defense')) base += 1;
 
   return base;
+}
+
+/** The character's chosen Fighting Style(s) — usually one, but Fighter's Champion picks a second at level 10. */
+export function getFightingStyles(character: Character): string[] {
+  return [character.fightingStyle, character.secondFightingStyle].filter((s): s is string => !!s);
+}
+
+export function hasFightingStyle(character: Character, key: string): boolean {
+  return getFightingStyles(character).includes(key);
 }
 
 export function isRangedWeapon(item: Item): boolean {
@@ -173,13 +182,13 @@ export function isWieldedTwoHanded(item: Item, twoHanded?: boolean): boolean {
 
 /** Attack roll bonus granted by the character's chosen Fighting Style for a specific weapon (e.g. Archery). */
 export function getFightingStyleAttackBonus(character: Character, item: Item): number {
-  if (character.fightingStyle === 'archery' && item.type === 'weapon' && isRangedWeapon(item)) return 2;
+  if (hasFightingStyle(character, 'archery') && item.type === 'weapon' && isRangedWeapon(item)) return 2;
   return 0;
 }
 
 /** Damage roll bonus granted by the character's chosen Fighting Style for a specific weapon (e.g. Dueling — one-handed melee weapon only). */
 export function getFightingStyleDamageBonus(character: Character, item: Item, twoHanded?: boolean): number {
-  if (character.fightingStyle !== 'dueling' || item.type !== 'weapon' || isRangedWeapon(item)) return 0;
+  if (!hasFightingStyle(character, 'dueling') || item.type !== 'weapon' || isRangedWeapon(item)) return 0;
   if (isWieldedTwoHanded(item, twoHanded)) return 0;
   return 2;
 }

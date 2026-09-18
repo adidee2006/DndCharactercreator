@@ -32,7 +32,7 @@ import { toggleInventoryEquipped, setInventoryTwoHanded } from '../lib/equipment
 import { knownConditionEffect, CONDITION_NAMES } from '../data/conditions';
 import { generateCharacterSheetPdf } from '../lib/pdfExport';
 import { characterToExportFile, downloadJson, slugFilename } from '../lib/jsonExport';
-import { totalValueInGp, autoExchange, formatGp } from '../lib/currency';
+import { totalValueInGp, autoExchange, formatGp, parseMoneyItem } from '../lib/currency';
 import { itemDescription } from '../lib/itemSummary';
 import { sourceCitation } from '../lib/sourceCitation';
 import { isProficientWithItem, isEligibleForFeat, getMaxAvailableSpellLevel, getSpellCounts, getSubclassBonusSpells } from '../lib/eligibility';
@@ -482,6 +482,35 @@ function CombatTab({
         {character.fightingStyle && fightingStylesByKey[character.fightingStyle]?.grantsCantripsFrom && (
           <FightingStyleCantripPicker character={character} update={update} compendium={compendium} />
         )}
+        {(() => {
+          const grantEntry = character.classes
+            .map((cl) => ({ cl, subclass: compendium.classes[cl.classKey]?.subclasses.find((s) => s.key === cl.subclassKey) }))
+            .find(({ cl, subclass }) => subclass?.grantsSecondFightingStyle && cl.level >= subclass.grantsSecondFightingStyle);
+          if (!grantEntry) return null;
+          const options = availableFightingStyles(grantEntry.cl.classKey);
+          return (
+            <div>
+              <label className="label">Second Fighting Style ({grantEntry.subclass!.name})</label>
+              <select
+                className="input"
+                value={character.secondFightingStyle ?? ''}
+                onChange={(e) => update({ secondFightingStyle: e.target.value || undefined })}
+              >
+                <option value="">None</option>
+                {options
+                  .filter((fs) => fs.key !== character.fightingStyle)
+                  .map((fs) => (
+                    <option key={fs.key} value={fs.key}>
+                      {fs.name}
+                    </option>
+                  ))}
+              </select>
+              {character.secondFightingStyle && (
+                <p className="mt-1 text-xs text-stone-500">{fightingStylesByKey[character.secondFightingStyle]?.description}</p>
+              )}
+            </div>
+          );
+        })()}
       </div>
 
       <div className="space-y-3">
@@ -1004,6 +1033,12 @@ function InventoryTab({
   }
   function addItem(itemKey: string) {
     if (!itemKey) return;
+    const item = compendium.items[itemKey];
+    const money = item ? parseMoneyItem(item) : null;
+    if (money) {
+      update({ currency: { ...character.currency, [money.denom]: character.currency[money.denom] + money.amount } });
+      return;
+    }
     update({ inventory: [...character.inventory, { id: uuid(), itemKey, quantity: 1, equipped: false, attuned: false }] });
   }
   function toggleExpanded(id: string) {

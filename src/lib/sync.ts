@@ -1,73 +1,43 @@
+import LZString from 'lz-string';
 import { listCharacters, getCharacter, saveCharacter } from './characters';
 import type { Character } from '../types/character';
 
 const SYNC_STORAGE_KEY = 'dnd-cc-sync-code';
-const FETCH_TIMEOUT_MS = 15000;
 
 /*
- * Cross-device sync uses ExtendsClass's free, key-less JSON storage API as
- * an anonymous save slot. Creating a bin returns its id, which becomes the
- * reusable sync code; push/pull read and write that same bin's JSON body
- * directly. The real API host is json.extendsclass.com (NOT
- * api.extendsclass.com, which a previous version of this code guessed
- * wrong and which 404s on every single request — confirmed against a real,
- * working integration of this exact service).
+ * Cross-device sync is fully self-contained: the "code" is this device's
+ * character data itself, compressed with lz-string into a URL-safe string.
+ * Nothing is ever uploaded anywhere, so there's no server to be down, rate
+ * limit, or require an account — pulling just decompresses and merges.
  *
- * This is the third backend this feature has used. jsonblob.com never
- * worked from a real browser (its POST response only carries the new id in
- * a Location header, which fetch() can't read cross-origin without the
- * server explicitly exposing it — it didn't). kvdb.io's bucket-create
- * endpoint requires a POST body with an email address (an empty POST
- * 500s), and — more fundamentally — actually accepting writes to that
- * bucket requires the email to be verified, which has no answer for a
- * static page with no account system. ExtendsClass's bin storage needs no
- * account or key to read or update a bin by id, which is why it was picked
- * here.
+ * This is the fourth backend this feature has used, and each of the
+ * previous three failed for a different, real reason (all confirmed live,
+ * not guessed): jsonblob.com's POST response only carries the new id in a
+ * Location header, which fetch() can't read cross-origin. kvdb.io's
+ * bucket-create endpoint needs a verified email before it accepts writes.
+ * ExtendsClass's json-storage API — despite documentation suggesting
+ * otherwise — returned a live 404 "Bin not found" when creating a bin with
+ * a body, then a live 404 "Bin not found" again when trying to PUT to a
+ * fresh client-generated id (it doesn't upsert), and finally a live 401
+ * "Wrong API key" from a bare POST — meaning bin *creation* on that service
+ * genuinely requires an account this app doesn't have, even though reading
+ * and updating an already-existing bin by id does not. Three free "anonymous
+ * JSON storage" services in a row gating the create step behind some form
+ * of auth is a pattern, not a fluke, so this version stops depending on any
+ * of them: the sync code is the data.
  *
- * Every request that can fail surfaces the server's actual response body
- * in the thrown error (not just a status code) — if this API's contract
- * turns out to be subtly different than documented, the resulting error
- * message should say so directly instead of leaving another round of
- * guessing. JSON export/import on the Characters page remains a
- * dependency-free fallback either way.
+ * The real tradeoff: since the code directly encodes the data, it changes
+ * (and gets longer) every time you push, and there's no single reusable
+ * address a second device can keep re-pulling from — each push produces a
+ * fresh code that has to be re-shared. Export/Import JSON on the
+ * Characters page remains the dependency-free fallback either way.
  */
-
-const API_BASE = 'https://json.extendsclass.com/bin';
 
 export interface SyncPayload {
   format: 'dnd-character-creator/sync';
   version: 1;
   savedAt: string;
   characters: Character[];
-}
-
-async function fetchWithTimeout(url: string, init?: RequestInit): Promise<Response> {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
-  try {
-    return await fetch(url, { ...init, signal: controller.signal });
-  } catch (err) {
-    if ((err as Error).name === 'AbortError') throw new Error('The sync service timed out. Try again in a moment.');
-    if (err instanceof TypeError) {
-      throw new Error(
-        "Couldn't reach the sync service. Check your internet connection — if this keeps happening, use Export/Import JSON instead.",
-      );
-    }
-    throw err;
-  } finally {
-    clearTimeout(timer);
-  }
-}
-
-/** Turns a failed response into an error that includes the server's own explanation, not just a status code. */
-async function errorFromResponse(res: Response, context: string): Promise<Error> {
-  let body = '';
-  try {
-    body = (await res.text()).trim().slice(0, 300);
-  } catch {
-    // ignore — body just won't be included
-  }
-  return new Error(`Sync service returned ${res.status} ${res.statusText} ${context}.${body ? ` (${body})` : ''}`);
 }
 
 export function getStoredSyncCode(): string | null {
@@ -92,62 +62,18 @@ async function buildPayload(): Promise<SyncPayload> {
   return { format: 'dnd-character-creator/sync', version: 1, savedAt: new Date().toISOString(), characters };
 }
 
-/** Pulls a bin id out of wherever the service put it — a JSON field, or a URI/URL whose last path segment is the id. */
-function extractBinId(body: unknown): string | null {
-  if (typeof body === 'string') return body.trim() || null;
-  if (body && typeof body === 'object') {
-    const b = body as Record<string, unknown>;
-    for (const key of ['id', 'bin', '_id', 'uri', 'url']) {
-      const v = b[key];
-      if (typeof v === 'string' && v.trim()) return v.trim().split('/').filter(Boolean).pop() ?? v.trim();
-    }
-  }
-  return null;
-}
-
-/**
- * Creates a new (empty) bin on the sync service and returns its id as the
- * shareable, reusable sync code, then immediately pushes this device's data
- * into it. This is deliberately two requests, not one: the service's create
- * endpoint (POST /bin) makes a fresh, empty bin and hands back its id —
- * sending this device's full character payload in that same POST (a much
- * larger, non-empty body) is what a previous version of this code did, and
- * a live 404 "Bin not found" response to that request suggests the create
- * endpoint doesn't accept content in the creating POST the way a plain
- * PUT-to-update does. A PUT straight to a not-yet-existing id was tried as
- * a fallback and also 404s ("Bin not found") — confirmed live — so this
- * service does not upsert-on-PUT; only POST /bin creates a bin at all.
- */
+/** Encodes everything currently saved on this device into a fresh, self-contained sync code. */
 export async function createSyncCode(): Promise<string> {
-  const res = await fetchWithTimeout(API_BASE, { method: 'POST' });
-  if (!res.ok) throw await errorFromResponse(res, 'while setting up your code');
-  let body: unknown = null;
-  try {
-    body = await res.json();
-  } catch {
-    // some deployments might return the id as plain text instead of JSON
-  }
-  const id = extractBinId(body) ?? extractBinId(await res.text().catch(() => null));
-  if (!id) {
-    throw new Error(
-      "The sync service didn't return a usable code. It may have changed its API — please use Export/Import JSON instead for now.",
-    );
-  }
-  await pushToSyncCode(id);
-  return id;
+  const payload = await buildPayload();
+  const code = LZString.compressToEncodedURIComponent(JSON.stringify(payload));
+  if (!code) throw new Error("Couldn't build a sync code from your characters. Try Export/Import JSON instead.");
+  setStoredSyncCode(code);
+  return code;
 }
 
-/** Overwrites the code's stored data with everything currently saved on this device. Safe to call repeatedly — the same code keeps working. */
-export async function pushToSyncCode(code: string): Promise<void> {
-  const payload = await buildPayload();
-  const res = await fetchWithTimeout(`${API_BASE}/${encodeURIComponent(code)}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  });
-  if (res.status === 404) throw new Error('That sync code no longer exists. Create a new one instead.');
-  if (!res.ok) throw await errorFromResponse(res, 'while pushing');
-  setStoredSyncCode(code);
+/** Re-encodes this device's current data as a fresh code — since the code *is* the data, "pushing" just means generating a new one to share. */
+export async function pushToSyncCode(): Promise<string> {
+  return createSyncCode();
 }
 
 export interface PullResult {
@@ -157,25 +83,23 @@ export interface PullResult {
 }
 
 /**
- * Fetches a sync code's data and upserts every character into the local
- * database. To avoid a pull silently clobbering newer edits made locally
- * before they were pushed, a character already present locally is only
- * overwritten if the incoming copy has a newer `updatedAt`; otherwise the
- * local version is kept and it's counted under `keptLocal`. Never deletes
- * local characters that aren't in the pulled payload.
+ * Decodes a sync code and upserts every character into the local database.
+ * To avoid a pull silently clobbering newer edits made locally, a character
+ * already present locally is only overwritten if the incoming copy has a
+ * newer `updatedAt`; otherwise the local version is kept (counted under
+ * `keptLocal`). Never deletes local characters that aren't in the code.
  */
 export async function pullFromSyncCode(code: string): Promise<PullResult> {
-  const res = await fetchWithTimeout(`${API_BASE}/${encodeURIComponent(code)}`);
-  if (res.status === 404) {
-    throw new Error("That sync code wasn't found — double-check it, or push from the other device first.");
+  const trimmed = code.trim();
+  const json = LZString.decompressFromEncodedURIComponent(trimmed);
+  if (!json) {
+    throw new Error('That doesn’t look like a valid sync code — double-check you copied the whole thing.');
   }
-  if (!res.ok) throw await errorFromResponse(res, 'while pulling');
-  const text = await res.text();
   let data: Partial<SyncPayload>;
   try {
-    data = JSON.parse(text);
+    data = JSON.parse(json);
   } catch {
-    throw new Error('That code doesn’t point to character data from this app.');
+    throw new Error('That doesn’t look like a valid sync code — double-check you copied the whole thing.');
   }
   if (!data || !Array.isArray(data.characters)) {
     throw new Error('That code doesn’t point to character data from this app.');
@@ -192,6 +116,6 @@ export async function pullFromSyncCode(code: string): Promise<PullResult> {
     await saveCharacter(character as Character);
     imported++;
   }
-  setStoredSyncCode(code);
+  setStoredSyncCode(trimmed);
   return { imported, keptLocal, savedAt: data.savedAt ?? new Date().toISOString() };
 }

@@ -86,6 +86,8 @@ export interface Character {
   feats: string[];
   /** Key into fightingStyles, for classes that grant a Fighting Style choice (Fighter, Paladin, Ranger). */
   fightingStyle?: string;
+  /** A second Fighting Style pick, for subclasses that grant one (Fighter's Champion, "Additional Fighting Style" at level 10). */
+  secondFightingStyle?: string;
   /** Cantrips chosen for a class-restricted Fighting Style that grants them (Blessed Warrior, Druidic Warrior). */
   fightingStyleCantrips?: string[];
 

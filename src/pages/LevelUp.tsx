@@ -28,6 +28,7 @@ export default function LevelUp() {
   const [featAbility, setFeatAbility] = useState<AbilityKey>('str');
   const [newSpells, setNewSpells] = useState<string[]>([]);
   const [fightingStyleChoice, setFightingStyleChoice] = useState('');
+  const [secondFightingStyleChoice, setSecondFightingStyleChoice] = useState('');
 
   useEffect(() => {
     if (!id) return;
@@ -58,6 +59,8 @@ export default function LevelUp() {
   const newSubclassFeatures = chosenSubclassObj?.features.filter((f) => f.level === newLevel) ?? [];
 
   const needsFightingStyle = !character.fightingStyle && newClassFeatures.some((f) => f.name.includes('Fighting Style'));
+  const needsSecondFightingStyle =
+    !character.secondFightingStyle && !!chosenSubclassObj?.grantsSecondFightingStyle && chosenSubclassObj.grantsSecondFightingStyle === newLevel;
 
   const mods = getAbilityModifiers(character, compendium);
   const conMod = mods.con;
@@ -105,6 +108,7 @@ export default function LevelUp() {
       hpCurrent: character.hpCurrent + hpGain,
       spellsKnown: newSpells.length ? [...character.spellsKnown, ...newSpells] : character.spellsKnown,
       fightingStyle: character.fightingStyle || fightingStyleChoice || undefined,
+      secondFightingStyle: character.secondFightingStyle || secondFightingStyleChoice || undefined,
     };
 
     if (grantsAsi) {
@@ -132,7 +136,10 @@ export default function LevelUp() {
     navigate(`/character/${character.id}`);
   }
 
-  const canCommit = (!needsSubclass || !!subclassKey) && (!needsFightingStyle || !!fightingStyleChoice);
+  const canCommit =
+    (!needsSubclass || !!subclassKey) &&
+    (!needsFightingStyle || !!fightingStyleChoice) &&
+    (!needsSecondFightingStyle || !!secondFightingStyleChoice);
 
   return (
     <div>
@@ -218,6 +225,25 @@ export default function LevelUp() {
               ))}
             </select>
             {fightingStyleChoice && <p className="mt-1 text-xs text-stone-500">{fightingStylesByKey[fightingStyleChoice]?.description}</p>}
+          </div>
+        )}
+
+        {needsSecondFightingStyle && (
+          <div>
+            <h3 className="section-title">Second Fighting Style ({chosenSubclassObj!.name})</h3>
+            <select className="input" value={secondFightingStyleChoice} onChange={(e) => setSecondFightingStyleChoice(e.target.value)}>
+              <option value="">Choose…</option>
+              {availableFightingStyles(current.classKey)
+                .filter((fs) => fs.key !== character.fightingStyle)
+                .map((fs) => (
+                  <option key={fs.key} value={fs.key}>
+                    {fs.name}
+                  </option>
+                ))}
+            </select>
+            {secondFightingStyleChoice && (
+              <p className="mt-1 text-xs text-stone-500">{fightingStylesByKey[secondFightingStyleChoice]?.description}</p>
+            )}
           </div>
         )}
 
@@ -351,7 +377,8 @@ export default function LevelUp() {
       {!canCommit && (
         <p className="mt-2 text-right text-xs text-amber-600">
           {needsSubclass && !subclassKey ? 'Choose a subclass to continue. ' : ''}
-          {needsFightingStyle && !fightingStyleChoice ? 'Choose a fighting style to continue.' : ''}
+          {needsFightingStyle && !fightingStyleChoice ? 'Choose a fighting style to continue. ' : ''}
+          {needsSecondFightingStyle && !secondFightingStyleChoice ? 'Choose a second fighting style to continue.' : ''}
         </p>
       )}
     </div>

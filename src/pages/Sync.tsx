@@ -22,7 +22,7 @@ export default function Sync() {
     try {
       const newCode = await createSyncCode();
       setCode(newCode);
-      setMessage({ kind: 'ok', text: 'Set up your sync code and pushed everything currently saved on this device. Reuse this same code from now on — no need to make a new one.' });
+      setMessage({ kind: 'ok', text: 'Generated a code for everything currently saved on this device. Copy it and paste it into this same page on your other device.' });
     } catch (err) {
       setMessage({ kind: 'error', text: (err as Error).message });
     } finally {
@@ -31,12 +31,12 @@ export default function Sync() {
   }
 
   async function handlePush() {
-    if (!code) return;
     setBusy('push');
     setMessage(null);
     try {
-      await pushToSyncCode(code);
-      setMessage({ kind: 'ok', text: 'Pushed everything currently saved on this device to your sync code.' });
+      const newCode = await pushToSyncCode();
+      setCode(newCode);
+      setMessage({ kind: 'ok', text: 'Generated a fresh code with everything currently saved on this device — share this new code, the old one won’t reflect these changes.' });
     } catch (err) {
       setMessage({ kind: 'error', text: (err as Error).message });
     } finally {
@@ -88,16 +88,26 @@ export default function Sync() {
     <div>
       <h1 className="mb-1 text-2xl font-bold">Sync Across Devices</h1>
       <p className="mb-6 max-w-3xl text-sm text-stone-500">
-        Move your characters between browsers and devices with one reusable code — no account or sign-in required.
+        Move your characters between browsers and devices with a code — no account, sign-in, or internet connection
+        required.
       </p>
 
       <div className="card mb-6 p-5">
         <h2 className="section-title">How this works</h2>
         <ul className="ml-4 list-disc space-y-1 text-sm text-stone-500">
-          <li>This uses a free, anonymous JSON storage service as your own private save slot. Setting up sync creates that slot and gives you its code.</li>
-          <li>It's one code per device setup, reused every time — push to save your latest changes, pull on another device to fetch them. You don't need to make a new code after every edit.</li>
-          <li>Anyone with your code can read or overwrite that data — treat it like an unlisted link, not a password. There's no encryption and no account behind it.</li>
-          <li>If this service is ever unreachable or discontinued, Export/Import JSON on the Characters page always works as a reliable manual alternative that doesn't depend on any third party.</li>
+          <li>
+            The code <em>is</em> your character data, compressed directly into text — nothing is ever uploaded
+            anywhere, so there's no third-party service that can go down, rate-limit, or require an account.
+          </li>
+          <li>
+            Because of that, the code changes (and gets longer) every time you push — copy the fresh one and share
+            it again rather than expecting the old one to update itself.
+          </li>
+          <li>Anyone with your code can read the data it contains — treat it like an unlisted link, not a password. There's no encryption.</li>
+          <li>
+            For a large roster the code can get long; Export/Import JSON on the Characters page is the better option
+            at that point, or if you'd rather send a file than paste a block of text.
+          </li>
           <li>Pulling never deletes local characters, and won't overwrite a local character with an older synced copy.</li>
         </ul>
       </div>
@@ -106,35 +116,34 @@ export default function Sync() {
         <h2 className="section-title">Your Sync Code</h2>
         {code ? (
           <div className="mb-4">
-            <div className="flex flex-wrap items-center gap-2">
-              <code className="select-all rounded-lg border border-stone-300 bg-stone-50 px-3 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800">
-                {code}
-              </code>
+            <textarea
+              readOnly
+              value={code}
+              onFocus={(e) => e.target.select()}
+              rows={4}
+              className="input w-full font-mono text-xs"
+            />
+            <div className="mt-2 flex flex-wrap gap-2">
               <button className="btn-secondary" onClick={copyCode}>
                 {copied ? 'Copied!' : 'Copy'}
+              </button>
+              <button className="btn-primary" onClick={handlePush} disabled={busy !== null}>
+                {busy === 'push' ? 'Regenerating…' : 'Regenerate (latest changes)'}
               </button>
               <button className="btn-ghost" onClick={handleForget}>
                 Forget this code
               </button>
             </div>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <button className="btn-primary" onClick={handlePush} disabled={busy !== null}>
-                {busy === 'push' ? 'Pushing…' : 'Push My Characters'}
-              </button>
-              <button className="btn-secondary" onClick={() => handlePull(code)} disabled={busy !== null}>
-                {busy === 'pull' ? 'Pulling…' : 'Pull Latest'}
-              </button>
-            </div>
             <p className="mt-2 text-xs text-stone-500">
-              On your other device, open this same page and enter this code under "Load a Different Code" below, then
-              Pull Latest. Reuse this code every time — pushing again just updates the same slot.
+              Copy this code and paste it into this same page on your other device, under "Load a Different Code"
+              below. Made a change since? Click Regenerate first — the code above won't update on its own.
             </p>
           </div>
         ) : (
           <div className="mb-4">
             <p className="mb-2 text-sm text-stone-500">You don't have a sync code on this device yet.</p>
             <button className="btn-primary" onClick={handleCreate} disabled={busy !== null}>
-              {busy === 'create' ? 'Setting up…' : 'Set Up Sync'}
+              {busy === 'create' ? 'Generating…' : 'Generate Sync Code'}
             </button>
           </div>
         )}

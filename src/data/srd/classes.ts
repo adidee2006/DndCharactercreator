@@ -457,6 +457,7 @@ export const classes: Record<string, DndClass> = {
       {
         key: 'champion',
         name: 'Champion',
+        grantsSecondFightingStyle: 10,
         features: [
           feat(3, 'Improved Critical', 'Your weapon attacks score a critical hit on a roll of 19 or 20.'),
           feat(7, 'Remarkable Athlete', 'Add half your proficiency bonus to Strength/Dexterity/Constitution checks that don’t already use it, and improve your running long jump distance.'),
@@ -922,6 +923,13 @@ export const classes: Record<string, DndClass> = {
       {
         key: 'aberrant-mind',
         name: 'Aberrant Mind',
+        bonusSpells: [
+          { level: 1, spellKeys: ['mind-sliver', 'arms-of-hadar', 'dissonant-whispers'] },
+          { level: 3, spellKeys: ['calm-emotions', 'detect-thoughts'] },
+          { level: 5, spellKeys: ['hunger-of-hadar', 'fear'] },
+          { level: 7, spellKeys: ['evards-black-tentacles', 'summon-beholderkin'] },
+          { level: 9, spellKeys: ['dominate-person', 'telekinesis'] },
+        ],
         features: [
           feat(3, 'Psionic Spells', 'Learn additional spells (such as Mind Sliver, Dissonant Whispers, Detect Thoughts, Telekinesis) that don’t count against your spells known.'),
           feat(3, 'Telepathic Speech', 'Telepathically speak to a creature you can see within 30 feet, and it can reply in kind, for the duration of the conversation.'),
@@ -934,6 +942,13 @@ export const classes: Record<string, DndClass> = {
       {
         key: 'clockwork-soul',
         name: 'Clockwork Soul',
+        bonusSpells: [
+          { level: 1, spellKeys: ['alarm', 'protection-from-evil-and-good'] },
+          { level: 3, spellKeys: ['aid', 'lesser-restoration'] },
+          { level: 5, spellKeys: ['dispel-magic', 'protection-from-energy'] },
+          { level: 7, spellKeys: ['freedom-of-movement', 'summon-construct'] },
+          { level: 9, spellKeys: ['greater-restoration', 'wall-of-force'] },
+        ],
         features: [
           feat(3, 'Clockwork Magic', 'Learn additional spells (such as Alarm, Protection from Evil and Good, Dispel Magic) that don’t count against your spells known.'),
           feat(3, 'Restore Balance', 'When a creature within 60 feet is about to roll with advantage or disadvantage, you can use your reaction to negate that. Usable a number of times equal to your proficiency bonus per long rest.'),

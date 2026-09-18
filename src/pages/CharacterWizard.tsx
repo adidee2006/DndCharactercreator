@@ -16,6 +16,7 @@ import {
 } from '../lib/abilityGeneration';
 import { getFinalAbilityScores, abilityModifier, formatModifier, getSpellcastingClasses, getHitPointsMax, isVersatileWeapon, getVersatileDamage } from '../lib/calc';
 import { toggleInventoryEquipped, setInventoryTwoHanded, autoEquipBatch } from '../lib/equipment';
+import { parseMoneyItem } from '../lib/currency';
 import { itemDescription } from '../lib/itemSummary';
 import { sourceCitation } from '../lib/sourceCitation';
 import { isProficientWithItem, getMaxAvailableSpellLevel, getSpellCounts } from '../lib/eligibility';
@@ -547,6 +548,35 @@ function ClassStep({
         );
       })()}
 
+      {(() => {
+        const primarySubclass = cls?.subclasses.find((s) => s.key === primary?.subclassKey);
+        const grantLevel = primarySubclass?.grantsSecondFightingStyle;
+        if (!grantLevel || (primary?.level ?? 1) < grantLevel) return null;
+        const options = availableFightingStyles(primary!.classKey);
+        return (
+          <div className="mb-4">
+            <label className="label">Second Fighting Style ({primarySubclass!.name})</label>
+            <select
+              className="input"
+              value={character.secondFightingStyle ?? ''}
+              onChange={(e) => update({ secondFightingStyle: e.target.value || undefined })}
+            >
+              <option value="">Choose…</option>
+              {options
+                .filter((fs) => fs.key !== character.fightingStyle)
+                .map((fs) => (
+                  <option key={fs.key} value={fs.key}>
+                    {fs.name}
+                  </option>
+                ))}
+            </select>
+            {character.secondFightingStyle && (
+              <p className="mt-1 text-xs text-stone-500">{fightingStylesByKey[character.secondFightingStyle]?.description}</p>
+            )}
+          </div>
+        );
+      })()}
+
       {character.classes.slice(1).map((cl, i) => (
         <div key={i} className="mb-2 grid grid-cols-1 gap-2 sm:grid-cols-4">
           <select className="input sm:col-span-2" value={cl.classKey} onChange={(e) => updateClassAt(i + 1, { classKey: e.target.value })}>
@@ -866,6 +896,12 @@ function EquipmentStep({
 
   function addItem(itemKey: string) {
     if (!itemKey) return;
+    const item = compendium.items[itemKey];
+    const money = item ? parseMoneyItem(item) : null;
+    if (money) {
+      update({ currency: { ...character.currency, [money.denom]: character.currency[money.denom] + money.amount } });
+      return;
+    }
     update({
       inventory: [...character.inventory, { id: uuid(), itemKey, quantity: 1, equipped: false, attuned: false }],
     });

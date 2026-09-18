@@ -360,6 +360,10 @@ export async function generateCharacterSheetPdf(character: Character, compendium
     }
     const subclass = cls.subclasses.find((s) => s.key === cl.subclassKey);
     if (subclass) for (const f of subclass.features) if (f.level <= cl.level) featureTexts.push(`${f.name} (${subclass.name} ${f.level})`);
+    if (subclass?.grantsSecondFightingStyle && cl.level >= subclass.grantsSecondFightingStyle && character.secondFightingStyle) {
+      const style = fightingStylesByKey[character.secondFightingStyle];
+      featureTexts.push(`Fighting Style: ${style?.name ?? character.secondFightingStyle} (${subclass.name} ${subclass.grantsSecondFightingStyle})`);
+    }
   }
   if (race) for (const t of race.traits) featureTexts.push(t.name);
   for (const cf of character.customFeatures) featureTexts.push(cf.name);

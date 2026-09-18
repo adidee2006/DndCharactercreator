@@ -171,6 +171,8 @@ export interface Subclass {
    * restriction).
    */
   bonusSkills?: { level: number; fixed?: SkillKey[]; choose?: number; chooseFrom?: SkillKey[] }[];
+  /** The class level at which this subclass grants a second Fighting Style pick (Fighter's Champion, "Additional Fighting Style", level 10). */
+  grantsSecondFightingStyle?: number;
 }
 
 export interface DndClass {
