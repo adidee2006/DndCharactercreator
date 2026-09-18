@@ -105,44 +105,35 @@ function extractBinId(body: unknown): string | null {
   return null;
 }
 
-/** A short, URL-safe random id — used as a client-generated bin id if the service's own POST-to-create endpoint doesn't cooperate. */
-function randomId(): string {
-  return Math.random().toString(36).slice(2, 10) + Math.random().toString(36).slice(2, 6);
-}
-
-/** Creates a new bin on the sync service and returns its id as the shareable, reusable sync code. */
+/**
+ * Creates a new (empty) bin on the sync service and returns its id as the
+ * shareable, reusable sync code, then immediately pushes this device's data
+ * into it. This is deliberately two requests, not one: the service's create
+ * endpoint (POST /bin) makes a fresh, empty bin and hands back its id —
+ * sending this device's full character payload in that same POST (a much
+ * larger, non-empty body) is what a previous version of this code did, and
+ * a live 404 "Bin not found" response to that request suggests the create
+ * endpoint doesn't accept content in the creating POST the way a plain
+ * PUT-to-update does. A PUT straight to a not-yet-existing id was tried as
+ * a fallback and also 404s ("Bin not found") — confirmed live — so this
+ * service does not upsert-on-PUT; only POST /bin creates a bin at all.
+ */
 export async function createSyncCode(): Promise<string> {
-  const payload = await buildPayload();
-  const res = await fetchWithTimeout(API_BASE, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  });
-  if (res.ok) {
-    let body: unknown = null;
-    try {
-      body = await res.json();
-    } catch {
-      // some deployments might return the id as plain text instead of JSON
-    }
-    const id = extractBinId(body) ?? extractBinId(await res.text().catch(() => null));
-    if (id) {
-      setStoredSyncCode(id);
-      return id;
-    }
+  const res = await fetchWithTimeout(API_BASE, { method: 'POST' });
+  if (!res.ok) throw await errorFromResponse(res, 'while setting up your code');
+  let body: unknown = null;
+  try {
+    body = await res.json();
+  } catch {
+    // some deployments might return the id as plain text instead of JSON
   }
-  // POST-to-create didn't give us an id (wrong response shape, or this
-  // endpoint needs an account this app doesn't have). Fall back to writing
-  // directly to a client-generated id — PUT to a bin id creates it if it
-  // doesn't exist yet, same as every push after this one.
-  const id = randomId();
-  const putRes = await fetchWithTimeout(`${API_BASE}/${encodeURIComponent(id)}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  });
-  if (!putRes.ok) throw await errorFromResponse(putRes, 'while setting up your code');
-  setStoredSyncCode(id);
+  const id = extractBinId(body) ?? extractBinId(await res.text().catch(() => null));
+  if (!id) {
+    throw new Error(
+      "The sync service didn't return a usable code. It may have changed its API — please use Export/Import JSON instead for now.",
+    );
+  }
+  await pushToSyncCode(id);
   return id;
 }
 

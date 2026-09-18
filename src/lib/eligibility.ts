@@ -164,5 +164,11 @@ export function getSpellCounts(character: Character, compendium: Compendium): Sp
   if (character.fightingStyle && fightingStylesByKey[character.fightingStyle]?.grantsCantripsFrom) {
     cantripLimit += character.fightingStyleCantrips?.length ?? 2;
   }
+  // Bard's Magical Secrets (level 10, +2 known spells from any class) and
+  // College of Lore's Additional Magical Secrets (level 6, +2 more) are on
+  // top of the bard spells-known table, not counted against it.
+  const bardLevel = character.classes.find((cl) => cl.classKey === 'bard')?.level ?? 0;
+  if (bardLevel >= 10) spellLimit += 2;
+  if (bardLevel >= 6 && character.classes.some((cl) => cl.classKey === 'bard' && cl.subclassKey === 'lore')) spellLimit += 2;
   return { cantripLimit, spellLimit };
 }

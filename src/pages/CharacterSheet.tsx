@@ -25,7 +25,10 @@ import {
   getExhaustionPenalty,
   getWeaponAttacks,
   getClassResources,
+  isVersatileWeapon,
+  getVersatileDamage,
 } from '../lib/calc';
+import { toggleInventoryEquipped, setInventoryTwoHanded } from '../lib/equipment';
 import { knownConditionEffect, CONDITION_NAMES } from '../data/conditions';
 import { generateCharacterSheetPdf } from '../lib/pdfExport';
 import { characterToExportFile, downloadJson, slugFilename } from '../lib/jsonExport';
@@ -990,6 +993,12 @@ function InventoryTab({
   function patchItem(id: string, patch: Partial<InventoryEntry>) {
     update({ inventory: character.inventory.map((i) => (i.id === id ? { ...i, ...patch } : i)) });
   }
+  function toggleEquipped(inv: InventoryEntry) {
+    update({ inventory: toggleInventoryEquipped(character.inventory, compendium, inv.id) });
+  }
+  function setTwoHanded(inv: InventoryEntry, twoHanded: boolean) {
+    update({ inventory: setInventoryTwoHanded(character.inventory, compendium, inv.id, twoHanded) });
+  }
   function removeItem(id: string) {
     update({ inventory: character.inventory.filter((i) => i.id !== id) });
   }
@@ -1061,9 +1070,15 @@ function InventoryTab({
                   onChange={(e) => patchItem(inv.id, { quantity: Number(e.target.value) || 1 })}
                 />
                 <label className="flex items-center gap-1 text-xs">
-                  <input type="checkbox" checked={inv.equipped} onChange={() => patchItem(inv.id, { equipped: !inv.equipped })} />
+                  <input type="checkbox" checked={inv.equipped} onChange={() => toggleEquipped(inv)} />
                   Equipped
                 </label>
+                {item && isVersatileWeapon(item) && (
+                  <label className="flex items-center gap-1 text-xs" title={`One-handed: ${item.damage}. Two-handed: ${getVersatileDamage(item)}.`}>
+                    <input type="checkbox" checked={!!inv.twoHanded} onChange={(e) => setTwoHanded(inv, e.target.checked)} />
+                    Two-handed
+                  </label>
+                )}
                 {item?.requiresAttunement && (
                   <label className="flex items-center gap-1 text-xs">
                     <input type="checkbox" checked={inv.attuned} onChange={() => patchItem(inv.id, { attuned: !inv.attuned })} />

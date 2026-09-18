@@ -154,17 +154,33 @@ export function isRangedWeapon(item: Item): boolean {
   return !!item.weaponProperties?.some((p) => p.startsWith('Ammunition'));
 }
 
+/** True if this weapon has the Versatile property (can be wielded one- or two-handed for a different damage die). */
+export function isVersatileWeapon(item: Item): boolean {
+  return !!item.weaponProperties?.some((p) => p.startsWith('Versatile'));
+}
+
+/** The higher damage die a Versatile weapon deals when wielded two-handed, e.g. "1d8" for a "Versatile (1d8)" property. Null if not versatile. */
+export function getVersatileDamage(item: Item): string | null {
+  const prop = item.weaponProperties?.find((p) => p.startsWith('Versatile'));
+  const match = prop?.match(/\(([^)]+)\)/);
+  return match?.[1] ?? null;
+}
+
+/** Whether this weapon is actually being wielded two-handed right now — inherently Two-Handed, or Versatile with the player's two-handed toggle on. */
+export function isWieldedTwoHanded(item: Item, twoHanded?: boolean): boolean {
+  return !!item.weaponProperties?.includes('Two-Handed') || (isVersatileWeapon(item) && !!twoHanded);
+}
+
 /** Attack roll bonus granted by the character's chosen Fighting Style for a specific weapon (e.g. Archery). */
 export function getFightingStyleAttackBonus(character: Character, item: Item): number {
   if (character.fightingStyle === 'archery' && item.type === 'weapon' && isRangedWeapon(item)) return 2;
   return 0;
 }
 
-/** Damage roll bonus granted by the character's chosen Fighting Style for a specific weapon (e.g. Dueling). */
-export function getFightingStyleDamageBonus(character: Character, item: Item): number {
+/** Damage roll bonus granted by the character's chosen Fighting Style for a specific weapon (e.g. Dueling — one-handed melee weapon only). */
+export function getFightingStyleDamageBonus(character: Character, item: Item, twoHanded?: boolean): number {
   if (character.fightingStyle !== 'dueling' || item.type !== 'weapon' || isRangedWeapon(item)) return 0;
-  const isTwoHanded = item.weaponProperties?.includes('Two-Handed');
-  if (isTwoHanded) return 0;
+  if (isWieldedTwoHanded(item, twoHanded)) return 0;
   return 2;
 }
 
@@ -174,16 +190,17 @@ export interface WeaponAttack {
   damageText: string;
 }
 
-/** Attack bonus + damage line for a weapon, using Str/Dex/Finesse rules, proficiency, fighting style, and exhaustion. */
-export function getWeaponAttack(character: Character, compendium: Compendium, item: Item): WeaponAttack {
+/** Attack bonus + damage line for a weapon, using Str/Dex/Finesse rules, proficiency, fighting style, and exhaustion. `twoHanded` matters only for a Versatile weapon (uses its higher damage die and loses the Dueling bonus). */
+export function getWeaponAttack(character: Character, compendium: Compendium, item: Item, twoHanded?: boolean): WeaponAttack {
   const mods = getAbilityModifiers(character, compendium);
   const prof = getProficiencyBonus(character);
   const ranged = isRangedWeapon(item);
   const hasFinesse = item.weaponProperties?.some((p) => p.startsWith('Finesse'));
   const abilityMod = ranged ? mods.dex : hasFinesse ? Math.max(mods.str, mods.dex) : mods.str;
   const attackBonus = abilityMod + prof + getFightingStyleAttackBonus(character, item) + getExhaustionPenalty(character);
-  const damageBonus = abilityMod + getFightingStyleDamageBonus(character, item);
-  const damageText = item.damage ? `${item.damage}${damageBonus !== 0 ? formatModifier(damageBonus) : ''} ${item.damageType ?? ''}`.trim() : '';
+  const damageBonus = abilityMod + getFightingStyleDamageBonus(character, item, twoHanded);
+  const damageDie = (isVersatileWeapon(item) && twoHanded && getVersatileDamage(item)) || item.damage;
+  const damageText = damageDie ? `${damageDie}${damageBonus !== 0 ? formatModifier(damageBonus) : ''} ${item.damageType ?? ''}`.trim() : '';
   return { item, attackBonus, damageText };
 }
 
@@ -196,9 +213,9 @@ export function getWeaponAttacks(character: Character, compendium: Compendium): 
   const equipped = weaponEntries.filter((inv) => inv.equipped);
   const source = equipped.length > 0 ? equipped : weaponEntries;
   return source
-    .map((inv) => compendium.items[inv.itemKey!])
-    .filter((item): item is Item => !!item)
-    .map((item) => getWeaponAttack(character, compendium, item));
+    .map((inv) => ({ item: compendium.items[inv.itemKey!], twoHanded: inv.twoHanded }))
+    .filter((x): x is { item: Item; twoHanded: boolean | undefined } => !!x.item)
+    .map(({ item, twoHanded }) => getWeaponAttack(character, compendium, item, twoHanded));
 }
 
 export function getSpeed(character: Character, compendium: Compendium): number {

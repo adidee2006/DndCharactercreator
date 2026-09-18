@@ -14,7 +14,8 @@ import {
   rollAbilitySet,
   blankAbilityScores,
 } from '../lib/abilityGeneration';
-import { getFinalAbilityScores, abilityModifier, formatModifier, getSpellcastingClasses, getHitPointsMax } from '../lib/calc';
+import { getFinalAbilityScores, abilityModifier, formatModifier, getSpellcastingClasses, getHitPointsMax, isVersatileWeapon, getVersatileDamage } from '../lib/calc';
+import { toggleInventoryEquipped, setInventoryTwoHanded, autoEquipBatch } from '../lib/equipment';
 import { itemDescription } from '../lib/itemSummary';
 import { sourceCitation } from '../lib/sourceCitation';
 import { isProficientWithItem, getMaxAvailableSpellLevel, getSpellCounts } from '../lib/eligibility';
@@ -246,7 +247,16 @@ function RaceStep({
           <select
             className="input"
             value={character.race.subraceKey ?? ''}
-            onChange={(e) => update({ race: { key: race.key, subraceKey: e.target.value || undefined } })}
+            onChange={(e) => {
+              const subraceKey = e.target.value || undefined;
+              const sr = race.subraces?.find((s) => s.key === subraceKey);
+              update({
+                race: { key: race.key, subraceKey },
+                toolProficiencies: sr?.bonusToolProficiencies
+                  ? Array.from(new Set([...character.toolProficiencies, ...sr.bonusToolProficiencies]))
+                  : character.toolProficiencies,
+              });
+            }}
           >
             <option value="">Choose…</option>
             {race.subraces.map((sr) => (
@@ -743,24 +753,34 @@ function SkillsStep({
   const primary = character.classes[0];
   const cls = compendium.classes[primary?.classKey];
   const subclass = cls?.subclasses.find((s) => s.key === primary?.subclassKey);
+  const race = compendium.races[character.race.key];
   const bonusSkillEntries = (subclass?.bonusSkills ?? []).filter((b) => b.level <= (primary?.level ?? 1));
   const fixedSubclassSkills = bonusSkillEntries.flatMap((b) => b.fixed ?? []);
+  const fixedRaceSkills = race?.bonusSkills?.fixed ?? [];
   const subclassChooseCount = bonusSkillEntries.reduce((sum, b) => sum + (b.choose ?? 0), 0);
+  const raceChooseCount = race?.bonusSkills?.choose ?? 0;
   // If any "choose" entry omits chooseFrom, that grant allows any skill, so the option pool can't be restricted.
   const subclassChooseUnrestricted = bonusSkillEntries.some((b) => b.choose && !b.chooseFrom);
+  const raceChooseUnrestricted = raceChooseCount > 0 && !race?.bonusSkills?.chooseFrom;
   const subclassChooseFrom = bonusSkillEntries.flatMap((b) => b.chooseFrom ?? []);
+  const raceChooseFrom = race?.bonusSkills?.chooseFrom ?? [];
 
   const ALL_SKILLS: SkillKey[] = ['acrobatics', 'animalHandling', 'arcana', 'athletics', 'deception', 'history', 'insight', 'intimidation', 'investigation', 'medicine', 'nature', 'perception', 'performance', 'persuasion', 'religion', 'sleightOfHand', 'stealth', 'survival'];
   const classAllowsAny = cls?.skillChoices.options === 'any';
   const allSkillOptions: SkillKey[] =
-    classAllowsAny || subclassChooseUnrestricted
+    classAllowsAny || subclassChooseUnrestricted || raceChooseUnrestricted
       ? ALL_SKILLS
-      : Array.from(new Set([...(cls?.skillChoices.options as SkillKey[] | undefined) ?? [], ...subclassChooseFrom]));
+      : Array.from(new Set([...(cls?.skillChoices.options as SkillKey[] | undefined) ?? [], ...subclassChooseFrom, ...raceChooseFrom]));
 
   const backgroundSkills = compendium.backgrounds[character.background]?.skillProficiencies ?? [];
-  const lockedSkills = Array.from(new Set([...backgroundSkills, ...fixedSubclassSkills]));
-  const totalChooseCount = (cls?.skillChoices.count ?? 2) + subclassChooseCount;
+  const lockedSkills = Array.from(new Set([...backgroundSkills, ...fixedSubclassSkills, ...fixedRaceSkills]));
+  const totalChooseCount = (cls?.skillChoices.count ?? 2) + subclassChooseCount + raceChooseCount;
   const chosenFromClass = character.skillProficiencies.filter((s) => !lockedSkills.includes(s));
+
+  const bonusSources = [
+    subclassChooseCount > 0 ? `${subclassChooseCount} from ${subclass?.name}` : null,
+    raceChooseCount > 0 ? `${raceChooseCount} from ${race?.name}` : null,
+  ].filter(Boolean);
 
   function toggleSkill(skill: SkillKey) {
     const has = character.skillProficiencies.includes(skill);
@@ -772,17 +792,22 @@ function SkillsStep({
     }
   }
 
+  function lockedSourceLabel(skill: SkillKey): string {
+    if (backgroundSkills.includes(skill)) return 'background';
+    if (fixedRaceSkills.includes(skill)) return race?.name ?? 'race';
+    return subclass?.name ?? 'subclass';
+  }
+
   return (
     <div>
       <p className="mb-3 text-sm text-stone-500">
         Choose {totalChooseCount} skill{totalChooseCount === 1 ? '' : 's'}
-        {subclassChooseCount > 0 ? ` (${cls?.skillChoices.count ?? 2} from your class, ${subclassChooseCount} from ${subclass?.name})` : ''}.
-        Background{fixedSubclassSkills.length > 0 ? ` and subclass` : ''} skills are added automatically.
+        {bonusSources.length > 0 ? ` (${cls?.skillChoices.count ?? 2} from your class, ${bonusSources.join(', ')})` : ''}.
+        Background{lockedSkills.length > backgroundSkills.length ? ', race,' : ''} and subclass skills are added automatically.
       </p>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
         {allSkillOptions.map((skill) => {
           const locked = lockedSkills.includes(skill);
-          const fromBackground = backgroundSkills.includes(skill);
           const checked = character.skillProficiencies.includes(skill);
           return (
             <label
@@ -791,7 +816,7 @@ function SkillsStep({
             >
               <input type="checkbox" checked={checked} disabled={locked} onChange={() => toggleSkill(skill)} />
               {skill.replace(/([A-Z])/g, ' $1').replace(/^./, (c) => c.toUpperCase())}
-              {locked && <span className="text-xs">({fromBackground ? 'background' : subclass?.name})</span>}
+              {locked && <span className="text-xs">({lockedSourceLabel(skill)})</span>}
             </label>
           );
         })}
@@ -836,7 +861,7 @@ function EquipmentStep({
         attuned: false,
       };
     });
-    update({ inventory: [...character.inventory, ...newEntries] });
+    update({ inventory: autoEquipBatch(character.inventory, newEntries, compendium) });
   }
 
   function addItem(itemKey: string) {
@@ -849,7 +874,10 @@ function EquipmentStep({
     update({ inventory: character.inventory.filter((i) => i.id !== id) });
   }
   function toggleEquipped(id: string) {
-    update({ inventory: character.inventory.map((i) => (i.id === id ? { ...i, equipped: !i.equipped } : i)) });
+    update({ inventory: toggleInventoryEquipped(character.inventory, compendium, id) });
+  }
+  function setTwoHanded(id: string, twoHanded: boolean) {
+    update({ inventory: setInventoryTwoHanded(character.inventory, compendium, id, twoHanded) });
   }
   function setQty(id: string, qty: number) {
     update({ inventory: character.inventory.map((i) => (i.id === id ? { ...i, quantity: qty } : i)) });
@@ -903,6 +931,12 @@ function EquipmentStep({
                   <input type="checkbox" checked={inv.equipped} onChange={() => toggleEquipped(inv.id)} />
                   Equipped
                 </label>
+                {item && isVersatileWeapon(item) && (
+                  <label className="flex items-center gap-1 text-xs" title={`One-handed: ${item.damage}. Two-handed: ${getVersatileDamage(item)}.`}>
+                    <input type="checkbox" checked={!!inv.twoHanded} onChange={(e) => setTwoHanded(inv.id, e.target.checked)} />
+                    Two-handed
+                  </label>
+                )}
                 <button className="btn-danger" onClick={() => removeItem(inv.id)}>
                   Remove
                 </button>

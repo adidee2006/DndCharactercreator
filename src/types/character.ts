@@ -25,6 +25,8 @@ export interface InventoryEntry {
   equipped: boolean;
   attuned: boolean;
   notes?: string;
+  /** For a Versatile weapon: whether it's currently being wielded two-handed (uses the higher versatile damage die, and can't be paired with a shield). Ignored for weapons that aren't Versatile. */
+  twoHanded?: boolean;
 }
 
 export interface Currency {

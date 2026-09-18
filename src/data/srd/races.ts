@@ -87,6 +87,7 @@ export const races: Record<string, Race> = {
     darkvision: 60,
     abilityBonuses: [],
     languages: ['Common', 'Elvish'],
+    bonusSkills: { choose: 1, chooseFrom: ['insight', 'perception', 'survival'] },
     traits: [
       { name: 'Fey Ancestry', description: 'You have advantage on saving throws against being charmed, and magic can’t put you to sleep.' },
       { name: 'Keen Senses', description: 'You gain proficiency in one of the following skills of your choice: Insight, Perception, or Survival.' },
@@ -140,6 +141,7 @@ export const races: Record<string, Race> = {
         key: 'rock-gnome-lineage',
         name: 'Gnomish Lineage: Rock Gnome',
         abilityBonuses: [],
+        bonusToolProficiencies: ["Tinker's tools"],
         traits: [
           {
             name: "Tinker's Gift",
@@ -192,6 +194,7 @@ export const races: Record<string, Race> = {
     abilityBonuses: [],
     languages: ['Common'],
     languageChoices: 1,
+    bonusSkills: { choose: 1 },
     traits: [
       { name: 'Resourceful', description: 'You gain Heroic Inspiration whenever you finish a long rest.' },
       { name: 'Skillful', description: 'You gain proficiency in one skill of your choice.' },

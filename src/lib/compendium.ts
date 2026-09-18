@@ -491,6 +491,7 @@ function sanitizeSubraces(value: unknown): Subrace[] | undefined {
       abilityBonuses: sanitizeAbilityBonuses(s.abilityBonuses),
       traits: sanitizeTraits(s.traits),
       speed: s.speed != null ? Number(s.speed) : undefined,
+      bonusToolProficiencies: s.bonusToolProficiencies != null ? asStringArray(s.bonusToolProficiencies) : undefined,
     }));
 }
 
@@ -538,6 +539,11 @@ function sanitizeRace(r: Race): Race {
     traits: sanitizeTraits(r.traits),
     languages: asStringArray(r.languages),
     subraces: sanitizeSubraces((r as unknown as Record<string, unknown>).subraces),
+    bonusSkills:
+      (r as unknown as Record<string, unknown>).bonusSkills &&
+      typeof (r as unknown as Record<string, unknown>).bonusSkills === 'object'
+        ? ((r as unknown as Record<string, unknown>).bonusSkills as Race['bonusSkills'])
+        : undefined,
   };
 }
 

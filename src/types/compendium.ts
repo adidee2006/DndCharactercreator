@@ -88,6 +88,8 @@ export interface Subrace {
   abilityBonuses: AbilityBonus[];
   traits: Trait[];
   speed?: number;
+  /** Fixed tool proficiencies this lineage grants (no choice), e.g. Rock Gnome's Tinker's Gift (tinker's tools). */
+  bonusToolProficiencies?: string[];
 }
 
 export interface Race {
@@ -104,6 +106,8 @@ export interface Race {
   languageChoices?: number;
   subraces?: Subrace[];
   darkvision?: number;
+  /** A bonus skill proficiency this race grants — fixed named skill(s) (no choice) or a player's choice of N, optionally restricted (e.g. Elf's Keen Senses: choose 1 of Insight/Perception/Survival; Human's Skillful: choose any 1). */
+  bonusSkills?: { fixed?: SkillKey[]; choose?: number; chooseFrom?: SkillKey[] };
 }
 
 export interface ClassFeature {
