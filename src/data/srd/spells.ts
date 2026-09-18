@@ -1,0 +1,114 @@
+import type { Spell } from '../../types/compendium';
+
+const SRD = { origin: 'srd' as const, label: 'SRD 5.1' };
+
+function s(
+  key: string,
+  name: string,
+  level: number,
+  school: Spell['school'],
+  classes: string[],
+  opts: Partial<Spell> = {},
+): Spell {
+  return {
+    key,
+    name,
+    source: SRD,
+    level,
+    school,
+    castingTime: opts.castingTime ?? '1 action',
+    range: opts.range ?? 'Self',
+    components: opts.components ?? 'V, S',
+    duration: opts.duration ?? 'Instantaneous',
+    concentration: opts.concentration ?? false,
+    ritual: opts.ritual ?? false,
+    classes,
+    description: opts.description ?? '',
+  };
+}
+
+export const spells: Record<string, Spell> = {
+  // Cantrips
+  'fire-bolt': s('fire-bolt', 'Fire Bolt', 0, 'Evocation', ['sorcerer', 'wizard'], { range: '120 feet', components: 'V, S', description: 'Ranged spell attack, 1d10 fire damage, scales with level.' }),
+  'ray-of-frost': s('ray-of-frost', 'Ray of Frost', 0, 'Evocation', ['sorcerer', 'wizard'], { range: '60 feet', description: 'Ranged spell attack, 1d8 cold damage and reduces target speed by 10 ft.' }),
+  'eldritch-blast': s('eldritch-blast', 'Eldritch Blast', 0, 'Evocation', ['warlock'], { range: '120 feet', description: 'A beam of crackling energy streaks toward a creature, 1d10 force damage, extra beams at higher levels.' }),
+  'sacred-flame': s('sacred-flame', 'Sacred Flame', 0, 'Evocation', ['cleric'], { range: '60 feet', description: 'Radiant flame descends, target must succeed a Dexterity save or take 1d8 radiant damage.' }),
+  'guidance': s('guidance', 'Guidance', 0, 'Divination', ['cleric', 'druid'], { range: 'Touch', duration: 'Concentration, up to 1 minute', concentration: true, description: 'Target adds 1d4 to one ability check of their choice.' }),
+  'mending': s('mending', 'Mending', 0, 'Transmutation', ['bard', 'cleric', 'druid', 'sorcerer', 'wizard'], { castingTime: '1 minute', range: 'Touch', components: 'V, S, M', description: 'Repairs a single break or tear in an object.' }),
+  'minor-illusion': s('minor-illusion', 'Minor Illusion', 0, 'Illusion', ['bard', 'sorcerer', 'warlock', 'wizard'], { range: '30 feet', components: 'S, M', duration: '1 minute', description: 'Create a sound or an image of an object within range.' }),
+  'prestidigitation': s('prestidigitation', 'Prestidigitation', 0, 'Transmutation', ['bard', 'sorcerer', 'warlock', 'wizard'], { range: '10 feet', duration: 'Up to 1 hour', description: 'A minor magical trick: create a small sensory effect, light a candle, clean an object.' }),
+  'vicious-mockery': s('vicious-mockery', 'Vicious Mockery', 0, 'Enchantment', ['bard'], { range: '60 feet', components: 'V', description: 'Target must succeed a Wisdom save or take 1d4 psychic damage and have disadvantage on its next attack roll.' }),
+  'druidcraft': s('druidcraft', 'Druidcraft', 0, 'Transmutation', ['druid'], { range: '30 feet', description: 'Create a minor, harmless sensory effect tied to nature.' }),
+  'light': s('light', 'Light', 0, 'Evocation', ['bard', 'cleric', 'sorcerer', 'wizard'], { range: 'Touch', components: 'V, M', duration: '1 hour', description: 'An object you touch sheds bright light in a 20-foot radius.' }),
+  'thaumaturgy': s('thaumaturgy', 'Thaumaturgy', 0, 'Transmutation', ['cleric'], { range: '30 feet', components: 'V', duration: 'Up to 1 minute', description: 'Manifest a minor wonder: booming voice, flickering flames, tremors, etc.' }),
+  'poison-spray': s('poison-spray', 'Poison Spray', 0, 'Conjuration', ['druid', 'sorcerer', 'warlock', 'wizard'], { range: '10 feet', description: 'Target must succeed a Constitution save or take 1d12 poison damage.' }),
+  'mage-hand': s('mage-hand', 'Mage Hand', 0, 'Conjuration', ['bard', 'sorcerer', 'warlock', 'wizard'], { range: '30 feet', duration: '1 minute', description: 'A spectral hand appears and can manipulate objects at range.' }),
+
+  // Level 1
+  'magic-missile': s('magic-missile', 'Magic Missile', 1, 'Evocation', ['sorcerer', 'wizard'], { range: '120 feet', description: 'Three darts of magical force, each 1d4+1 force damage, automatically hit.' }),
+  'shield': s('shield', 'Shield', 1, 'Abjuration', ['sorcerer', 'wizard'], { castingTime: '1 reaction', range: 'Self', duration: '1 round', description: '+5 AC until the start of your next turn, including against the triggering attack, and immune to magic missile.' }),
+  'cure-wounds': s('cure-wounds', 'Cure Wounds', 1, 'Evocation', ['bard', 'cleric', 'druid', 'paladin', 'ranger'], { range: 'Touch', description: 'A creature you touch regains 1d8 + spellcasting modifier hit points.' }),
+  'healing-word': s('healing-word', 'Healing Word', 1, 'Evocation', ['bard', 'cleric', 'druid'], { castingTime: '1 bonus action', range: '60 feet', description: 'A creature of your choice regains 1d4 + spellcasting modifier hit points.' }),
+  'bless': s('bless', 'Bless', 1, 'Enchantment', ['cleric', 'paladin'], { range: '30 feet', components: 'V, S, M', duration: 'Concentration, up to 1 minute', concentration: true, description: 'Up to three creatures add 1d4 to attack rolls and saving throws.' }),
+  'guiding-bolt': s('guiding-bolt', 'Guiding Bolt', 1, 'Evocation', ['cleric'], { range: '120 feet', description: 'Ranged spell attack, 4d6 radiant damage; next attack against the target has advantage.' }),
+  'faerie-fire': s('faerie-fire', 'Faerie Fire', 1, 'Evocation', ['druid'], { range: '60 feet', duration: 'Concentration, up to 1 minute', concentration: true, description: 'Outlines creatures in light; attacks against them have advantage.' }),
+  'entangle': s('entangle', 'Entangle', 1, 'Conjuration', ['druid'], { range: '90 feet', duration: 'Concentration, up to 1 minute', concentration: true, description: 'Grasping weeds and vines sprout, restraining creatures in the area.' }),
+  'thunderwave': s('thunderwave', 'Thunderwave', 1, 'Evocation', ['bard', 'druid', 'sorcerer', 'wizard'], { range: 'Self (15-foot cube)', description: 'Each creature in the area takes 2d8 thunder damage and is pushed back on a failed Con save.' }),
+  'burning-hands': s('burning-hands', 'Burning Hands', 1, 'Evocation', ['sorcerer', 'wizard'], { range: 'Self (15-foot cone)', description: 'Each creature in the cone takes 3d6 fire damage on a failed Dex save, half on success.' }),
+  'charm-person': s('charm-person', 'Charm Person', 1, 'Enchantment', ['bard', 'druid', 'sorcerer', 'warlock', 'wizard'], { range: '30 feet', description: 'A humanoid you can see must succeed a Wisdom save or be charmed by you.' }),
+  'sleep': s('sleep', 'Sleep', 1, 'Enchantment', ['bard', 'sorcerer', 'wizard'], { range: '90 feet', components: 'V, S, M', duration: '1 minute', description: '5d8 hit points worth of creatures in the area fall unconscious, starting with the lowest current HP.' }),
+  'detect-magic': s('detect-magic', 'Detect Magic', 1, 'Divination', ['bard', 'cleric', 'druid', 'paladin', 'ranger', 'sorcerer', 'wizard'], { range: 'Self', duration: 'Concentration, up to 10 minutes', concentration: true, ritual: true, description: 'Sense the presence of magic within 30 feet.' }),
+  'identify': s('identify', 'Identify', 1, 'Divination', ['bard', 'wizard'], { castingTime: '1 minute', range: 'Touch', components: 'V, S, M', ritual: true, description: 'Learn the properties of a magic item or the magic affecting a creature/object.' }),
+  'mage-armor': s('mage-armor', 'Mage Armor', 1, 'Abjuration', ['sorcerer', 'wizard'], { range: 'Touch', components: 'V, S, M', duration: '8 hours', description: 'Target’s AC becomes 13 + Dex modifier while not wearing armor.' }),
+  'shield-of-faith': s('shield-of-faith', 'Shield of Faith', 1, 'Abjuration', ['cleric', 'paladin'], { range: '60 feet', duration: 'Concentration, up to 10 minutes', concentration: true, description: 'A creature gains +2 AC.' }),
+  'hunters-mark': s('hunters-mark', "Hunter's Mark", 1, 'Divination', ['ranger'], { castingTime: '1 bonus action', range: '90 feet', duration: 'Concentration, up to 1 hour', concentration: true, description: 'Deal an extra 1d6 damage to the marked target on weapon attacks; advantage to track it.' }),
+  'hellish-rebuke': s('hellish-rebuke', 'Hellish Rebuke', 1, 'Evocation', ['warlock'], { castingTime: '1 reaction', range: '60 feet', duration: 'Instantaneous', description: 'The creature that damaged you must make a Dex save or take 2d10 fire damage.' }),
+  'command': s('command', 'Command', 1, 'Enchantment', ['cleric', 'paladin'], { range: '60 feet', description: 'You speak a one-word command to a creature; it must obey on a failed Wisdom save.' }),
+  'feather-fall': s('feather-fall', 'Feather Fall', 1, 'Transmutation', ['bard', 'sorcerer', 'wizard'], { castingTime: '1 reaction', range: '60 feet', components: 'V, M', duration: '1 minute', description: 'Falling creatures descend slowly and take no fall damage.' }),
+
+  // Level 2
+  'scorching-ray': s('scorching-ray', 'Scorching Ray', 2, 'Evocation', ['sorcerer', 'wizard'], { range: '120 feet', description: 'Create three rays of fire, each a spell attack for 2d6 fire damage.' }),
+  'misty-step': s('misty-step', 'Misty Step', 2, 'Conjuration', ['sorcerer', 'warlock', 'wizard'], { castingTime: '1 bonus action', range: 'Self', components: 'V', description: 'Teleport up to 30 feet to an unoccupied space you can see.' }),
+  'spiritual-weapon': s('spiritual-weapon', 'Spiritual Weapon', 2, 'Evocation', ['cleric'], { castingTime: '1 bonus action', range: '60 feet', duration: '1 minute', description: 'Create a spectral weapon that makes a spell attack for 1d8 + spellcasting modifier force damage.' }),
+  'hold-person': s('hold-person', 'Hold Person', 2, 'Enchantment', ['bard', 'cleric', 'druid', 'sorcerer', 'warlock', 'wizard'], { range: '60 feet', duration: 'Concentration, up to 1 minute', concentration: true, description: 'A humanoid must succeed a Wisdom save or be paralyzed.' }),
+  'invisibility': s('invisibility', 'Invisibility', 2, 'Illusion', ['bard', 'sorcerer', 'warlock', 'wizard'], { range: 'Touch', components: 'V, S, M', duration: 'Concentration, up to 1 hour', concentration: true, description: 'A creature you touch becomes invisible until the spell ends or it attacks/casts.' }),
+  'moonbeam': s('moonbeam', 'Moonbeam', 2, 'Evocation', ['druid'], { range: '120 feet', duration: 'Concentration, up to 1 minute', concentration: true, description: 'A silvery beam of pale light shines in a 5-ft radius cylinder, dealing 2d10 radiant damage.' }),
+  'lesser-restoration': s('lesser-restoration', 'Lesser Restoration', 2, 'Abjuration', ['bard', 'cleric', 'druid', 'paladin', 'ranger'], { range: 'Touch', description: 'End one disease or condition afflicting a creature you touch (blinded, deafened, paralyzed, or poisoned).' }),
+  'aid': s('aid', 'Aid', 2, 'Abjuration', ['cleric', 'paladin'], { range: '30 feet', duration: '8 hours', description: 'Up to three creatures gain +5 hit points maximum and current for the duration.' }),
+  'web': s('web', 'Web', 2, 'Conjuration', ['sorcerer', 'wizard'], { range: '60 feet', components: 'V, S, M', duration: 'Concentration, up to 1 hour', concentration: true, description: 'Thick webbing fills the area, restraining creatures that fail a Dex save.' }),
+  'suggestion': s('suggestion', 'Suggestion', 2, 'Enchantment', ['bard', 'sorcerer', 'warlock', 'wizard'], { range: '30 feet', components: 'V, M', duration: 'Concentration, up to 8 hours', concentration: true, description: 'Suggest a course of action to a creature that must succeed a Wisdom save to resist.' }),
+  'pass-without-trace': s('pass-without-trace', 'Pass without Trace', 2, 'Abjuration', ['druid', 'ranger'], { range: 'Self', duration: 'Concentration, up to 1 hour', concentration: true, description: 'A veil of shadows conceals your group; +10 to Stealth checks, can’t be tracked non-magically.' }),
+
+  // Level 3
+  'fireball': s('fireball', 'Fireball', 3, 'Evocation', ['sorcerer', 'wizard'], { range: '150 feet', components: 'V, S, M', description: 'Each creature in a 20-foot radius sphere takes 8d6 fire damage on a failed Dex save, half on success.' }),
+  'lightning-bolt': s('lightning-bolt', 'Lightning Bolt', 3, 'Evocation', ['sorcerer', 'wizard'], { range: 'Self (100-foot line)', components: 'V, S, M', description: 'A stroke of lightning deals 8d6 lightning damage in a line.' }),
+  'counterspell': s('counterspell', 'Counterspell', 3, 'Abjuration', ['sorcerer', 'warlock', 'wizard'], { castingTime: '1 reaction', range: '60 feet', components: 'S', description: 'Interrupt a creature casting a spell; it fails unless it succeeds on an ability check.' }),
+  'fly': s('fly', 'Fly', 3, 'Transmutation', ['sorcerer', 'warlock', 'wizard'], { range: 'Touch', components: 'V, S, M', duration: 'Concentration, up to 10 minutes', concentration: true, description: 'The target gains a flying speed of 60 feet.' }),
+  'haste': s('haste', 'Haste', 3, 'Transmutation', ['sorcerer', 'wizard'], { range: '30 feet', components: 'V, S, M', duration: 'Concentration, up to 1 minute', concentration: true, description: 'Target’s speed doubles, +2 AC, advantage on Dex saves, and an additional action.' }),
+  'revivify': s('revivify', 'Revivify', 3, 'Necromancy', ['cleric', 'paladin'], { range: 'Touch', components: 'V, S, M', description: 'A creature that died within the last minute returns to life with 1 hit point.' }),
+  'dispel-magic': s('dispel-magic', 'Dispel Magic', 3, 'Abjuration', ['bard', 'cleric', 'druid', 'paladin', 'sorcerer', 'warlock', 'wizard'], { range: '120 feet', description: 'Ends one spell of 3rd level or lower on a target; higher-level spells require an ability check.' }),
+  'spirit-guardians': s('spirit-guardians', 'Spirit Guardians', 3, 'Conjuration', ['cleric'], { range: 'Self (15-foot radius)', components: 'V, S, M', duration: 'Concentration, up to 10 minutes', concentration: true, description: 'Spirits flit around you, dealing 3d8 radiant or necrotic damage to enemies that fail a Wisdom save.' }),
+  'animate-dead': s('animate-dead', 'Animate Dead', 3, 'Necromancy', ['cleric', 'wizard'], { castingTime: '1 minute', range: '10 feet', components: 'V, S, M', duration: 'Instantaneous', description: 'Raise a skeleton or zombie from a corpse to fight under your control.' }),
+  'call-lightning': s('call-lightning', 'Call Lightning', 3, 'Conjuration', ['druid'], { range: '120 feet', duration: 'Concentration, up to 10 minutes', concentration: true, description: 'A storm cloud forms; call down bolts of lightning dealing 3d10 damage.' }),
+
+  // Level 4
+  'greater-invisibility': s('greater-invisibility', 'Greater Invisibility', 4, 'Illusion', ['bard', 'sorcerer', 'wizard'], { range: 'Touch', duration: 'Concentration, up to 1 minute', concentration: true, description: 'The target becomes invisible even while attacking or casting spells.' }),
+  'polymorph': s('polymorph', 'Polymorph', 4, 'Transmutation', ['bard', 'druid', 'sorcerer', 'wizard'], { range: '60 feet', components: 'V, S, M', duration: 'Concentration, up to 1 hour', concentration: true, description: 'Transform a creature into a new form; its game statistics are replaced.' }),
+  'wall-of-fire': s('wall-of-fire', 'Wall of Fire', 4, 'Evocation', ['druid', 'sorcerer', 'wizard'], { range: '120 feet', components: 'V, S, M', duration: 'Concentration, up to 1 minute', concentration: true, description: 'Create a wall of fire that deals 5d8 fire damage to creatures in it or within 10 feet.' }),
+  'ice-storm': s('ice-storm', 'Ice Storm', 4, 'Evocation', ['druid', 'sorcerer', 'wizard'], { range: '300 feet', components: 'V, S, M', description: 'Hail deals 2d8 bludgeoning and 4d6 cold damage in a 20-foot radius cylinder.' }),
+  'banishment': s('banishment', 'Banishment', 4, 'Abjuration', ['cleric', 'paladin', 'sorcerer', 'warlock', 'wizard'], { range: '60 feet', components: 'V, S, M', duration: 'Concentration, up to 1 minute', concentration: true, description: 'Sends a creature to a harmless demiplane on a failed Charisma save.' }),
+
+  // Level 5
+  'cone-of-cold': s('cone-of-cold', 'Cone of Cold', 5, 'Evocation', ['sorcerer', 'wizard'], { range: 'Self (60-foot cone)', components: 'V, S, M', description: 'Each creature in the cone takes 8d8 cold damage on a failed Con save, half on success.' }),
+  'greater-restoration': s('greater-restoration', 'Greater Restoration', 5, 'Abjuration', ['bard', 'cleric', 'druid'], { castingTime: '1 minute', range: 'Touch', components: 'V, S, M', description: 'End one exhaustion level, or a curse, petrification, or reduced ability score/max HP.' }),
+  'mass-cure-wounds': s('mass-cure-wounds', 'Mass Cure Wounds', 5, 'Evocation', ['bard', 'cleric', 'druid'], { range: '60 feet', description: 'Up to six creatures in a 30-foot radius regain 3d8 + spellcasting modifier hit points.' }),
+  'raise-dead': s('raise-dead', 'Raise Dead', 5, 'Necromancy', ['bard', 'cleric', 'paladin'], { castingTime: '1 hour', range: 'Touch', components: 'V, S, M', description: 'Return a dead creature (dead no more than 10 days) to life.' }),
+  'hold-monster': s('hold-monster', 'Hold Monster', 5, 'Enchantment', ['bard', 'sorcerer', 'warlock', 'wizard'], { range: '90 feet', components: 'V, S, M', duration: 'Concentration, up to 1 minute', concentration: true, description: 'A creature must succeed a Wisdom save or be paralyzed for the duration.' }),
+
+  // Level 6-9 (iconic examples)
+  disintegrate: s('disintegrate', 'Disintegrate', 6, 'Transmutation', ['sorcerer', 'wizard'], { range: '60 feet', components: 'V, S, M', description: 'A thin green ray deals 10d6+40 force damage; a creature reduced to 0 HP is disintegrated.' }),
+  'chain-lightning': s('chain-lightning', 'Chain Lightning', 6, 'Evocation', ['sorcerer', 'wizard'], { range: '150 feet', components: 'V, S, M', description: 'A bolt of lightning arcs to a target then leaps to three other creatures, 10d8 lightning damage.' }),
+  'finger-of-death': s('finger-of-death', 'Finger of Death', 7, 'Necromancy', ['sorcerer', 'warlock', 'wizard'], { range: '60 feet', description: 'Send negative energy coursing through a creature, dealing 7d8+30 necrotic damage.' }),
+  'meteor-swarm': s('meteor-swarm', 'Meteor Swarm', 9, 'Evocation', ['sorcerer', 'wizard'], { range: '1 mile', description: 'Blazing orbs of fire plummet, dealing 20d6 fire and 20d6 bludgeoning damage across the area.' }),
+  wish: s('wish', 'Wish', 9, 'Conjuration', ['sorcerer', 'wizard'], { range: 'Self', description: 'The most powerful spell a mortal can cast; alter reality to fit your desires within limits.' }),
+};
