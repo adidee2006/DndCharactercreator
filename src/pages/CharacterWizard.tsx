@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useCompendium } from '../store/useCompendium';
 import { getCharacter, saveCharacter } from '../lib/characters';
 import { createBlankCharacter, type Character, type GenerationMethod } from '../types/character';
-import type { SkillKey } from '../types/compendium';
+import type { SkillKey, AbilityKey } from '../types/compendium';
 import { ABILITY_KEYS, ABILITY_NAMES } from '../types/compendium';
 import { v4 as uuid } from 'uuid';
 import {
@@ -256,7 +256,9 @@ function RaceStep({
             {race.darkvision ? ` • Darkvision ${race.darkvision} ft` : ''}
           </p>
           <p className="mb-2 text-stone-600 dark:text-stone-300">
-            Ability Bonuses: {race.abilityBonuses.map((b) => `${ABILITY_NAMES[b.ability]} +${b.bonus}`).join(', ') || 'None'}
+            {race.abilityBonuses.length > 0
+              ? `Ability Bonuses: ${race.abilityBonuses.map((b) => `${ABILITY_NAMES[b.ability]} +${b.bonus}`).join(', ')}`
+              : 'Ability score increases come from your Background, chosen below.'}
           </p>
           <ul className="space-y-1">
             {race.traits.map((t) => (
@@ -274,13 +276,19 @@ function RaceStep({
           className="input"
           value={character.background}
           onChange={(e) => {
+            const prevBg = compendium.backgrounds[character.background];
             const bg = compendium.backgrounds[e.target.value];
+            const featsWithoutOldOrigin = prevBg?.originFeat
+              ? character.feats.filter((f) => f !== prevBg.originFeat)
+              : character.feats;
             update({
               background: e.target.value,
+              backgroundAbilityChoice: undefined,
               skillProficiencies: Array.from(
                 new Set([...character.skillProficiencies, ...(bg?.skillProficiencies ?? [])]),
               ),
               toolProficiencies: Array.from(new Set([...character.toolProficiencies, ...(bg?.toolProficiencies ?? [])])),
+              feats: bg?.originFeat ? Array.from(new Set([...featsWithoutOldOrigin, bg.originFeat])) : featsWithoutOldOrigin,
             });
           }}
         >
@@ -294,12 +302,87 @@ function RaceStep({
             ))}
         </select>
         {compendium.backgrounds[character.background] && (
-          <p className="mt-2 text-sm text-stone-500">
-            <strong>{compendium.backgrounds[character.background].feature.name}.</strong>{' '}
-            {compendium.backgrounds[character.background].feature.description}
-          </p>
+          <div className="mt-2 text-sm text-stone-500">
+            <p>
+              <strong>{compendium.backgrounds[character.background].feature.name}.</strong>{' '}
+              {compendium.backgrounds[character.background].feature.description}
+            </p>
+            {compendium.backgrounds[character.background].originFeat && (
+              <p className="mt-1">
+                Origin feat: <strong>{compendium.feats[compendium.backgrounds[character.background].originFeat!]?.name ?? compendium.backgrounds[character.background].originFeat}</strong>
+              </p>
+            )}
+          </div>
         )}
       </div>
+
+      {compendium.backgrounds[character.background]?.abilityScores && (
+        <BackgroundAbilityChoice character={character} update={update} abilities={compendium.backgrounds[character.background]!.abilityScores!} />
+      )}
+    </div>
+  );
+}
+
+function BackgroundAbilityChoice({
+  character,
+  update,
+  abilities,
+}: {
+  character: Character;
+  update: (p: Partial<Character>) => void;
+  abilities: AbilityKey[];
+}) {
+  const choice = character.backgroundAbilityChoice;
+  const mode = choice?.mode ?? 'twoOne';
+
+  function setTwoOne(plusTwo: AbilityKey, plusOne: AbilityKey) {
+    update({ backgroundAbilityChoice: { mode: 'twoOne', plusTwo, plusOne } });
+  }
+  function setOneOneOne() {
+    update({ backgroundAbilityChoice: { mode: 'oneOneOne', abilities: [abilities[0], abilities[1], abilities[2]] } });
+  }
+
+  return (
+    <div className="mt-4 rounded-lg border border-stone-300 p-3 dark:border-stone-700">
+      <label className="label">Background Ability Scores</label>
+      <p className="mb-2 text-xs text-stone-500">
+        Choose +2 to one of {abilities.map((a) => ABILITY_NAMES[a]).join(', ')} and +1 to a different one, or +1 to all
+        three.
+      </p>
+      <div className="mb-2 flex gap-3 text-sm">
+        <label className="flex items-center gap-1">
+          <input type="radio" checked={mode === 'twoOne'} onChange={() => setTwoOne(abilities[0], abilities[1])} />
+          +2 / +1
+        </label>
+        <label className="flex items-center gap-1">
+          <input type="radio" checked={mode === 'oneOneOne'} onChange={setOneOneOne} />
+          +1 / +1 / +1
+        </label>
+      </div>
+      {mode === 'twoOne' && choice?.mode === 'twoOne' && (
+        <div className="flex flex-wrap gap-3 text-sm">
+          <label className="flex items-center gap-1">
+            +2
+            <select className="input" value={choice.plusTwo} onChange={(e) => setTwoOne(e.target.value as AbilityKey, choice.plusOne === e.target.value ? abilities.find((a) => a !== e.target.value)! : choice.plusOne)}>
+              {abilities.map((a) => (
+                <option key={a} value={a}>
+                  {ABILITY_NAMES[a]}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="flex items-center gap-1">
+            +1
+            <select className="input" value={choice.plusOne} onChange={(e) => setTwoOne(choice.plusTwo, e.target.value as AbilityKey)}>
+              {abilities.filter((a) => a !== choice.plusTwo).map((a) => (
+                <option key={a} value={a}>
+                  {ABILITY_NAMES[a]}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+      )}
     </div>
   );
 }
@@ -605,6 +688,15 @@ function AbilitiesStep({
           );
         })}
       </div>
+      {character.backgroundAbilityChoice ? (
+        <p className="mt-3 text-xs text-stone-500">
+          Final scores include the ability increase from your Background. Change it on the Race &amp; Background step.
+        </p>
+      ) : (
+        <p className="mt-3 text-xs text-stone-500">
+          Pick a Background on the previous step to add its ability score increase here.
+        </p>
+      )}
     </div>
   );
 }

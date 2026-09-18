@@ -11,6 +11,7 @@ export function itemSummaryLine(item: Item): string {
 
   if (item.damage) parts.push(`${item.damage}${item.damageType ? ` ${item.damageType}` : ''}`);
   if (item.weaponProperties?.length) parts.push(item.weaponProperties.join(', '));
+  if (item.masteryProperty) parts.push(`Mastery: ${item.masteryProperty}`);
   if (item.armorClassBase != null) {
     let ac = `AC ${item.armorClassBase}`;
     if (item.armorClassAddDex) ac += item.armorClassMaxDex != null ? ` + Dex (max ${item.armorClassMaxDex})` : ' + Dex';

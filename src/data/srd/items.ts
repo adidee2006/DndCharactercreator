@@ -1,6 +1,6 @@
 import type { Item } from '../../types/compendium';
 
-const SRD = { origin: 'srd' as const, label: 'SRD 5.1' };
+const SRD = { origin: 'srd' as const, label: "Player's Handbook (2024)", book: "Player's Handbook (2024)" };
 
 function weapon(
   key: string,
@@ -230,3 +230,46 @@ export const items: Record<string, Item> = {
   "smiths-tools": { key: 'smiths-tools', name: "Smith's Tools", source: SRD, type: 'tool', cost: '20 gp', weight: 8 },
   "alchemists-supplies": { key: 'alchemists-supplies', name: "Alchemist's Supplies", source: SRD, type: 'tool', cost: '50 gp', weight: 8 },
 };
+
+/** 2024 weapon mastery properties, one per weapon (see the Fighter/Barbarian/etc. Weapon Mastery feature). */
+const WEAPON_MASTERY: Record<string, Item['masteryProperty']> = {
+  club: 'Slow',
+  dagger: 'Nick',
+  greatclub: 'Push',
+  handaxe: 'Vex',
+  javelin: 'Vex',
+  'light-hammer': 'Nick',
+  mace: 'Sap',
+  quarterstaff: 'Topple',
+  sickle: 'Nick',
+  spear: 'Sap',
+  'light-crossbow': 'Slow',
+  dart: 'Vex',
+  shortbow: 'Vex',
+  sling: 'Slow',
+  battleaxe: 'Topple',
+  flail: 'Sap',
+  glaive: 'Graze',
+  greataxe: 'Cleave',
+  greatsword: 'Graze',
+  halberd: 'Cleave',
+  lance: 'Topple',
+  longsword: 'Sap',
+  maul: 'Topple',
+  morningstar: 'Sap',
+  pike: 'Push',
+  rapier: 'Vex',
+  scimitar: 'Nick',
+  shortsword: 'Vex',
+  trident: 'Topple',
+  warhammer: 'Push',
+  whip: 'Slow',
+  blowgun: 'Vex',
+  'hand-crossbow': 'Vex',
+  'heavy-crossbow': 'Push',
+  longbow: 'Slow',
+};
+
+for (const [key, mastery] of Object.entries(WEAPON_MASTERY)) {
+  if (items[key]) items[key].masteryProperty = mastery;
+}

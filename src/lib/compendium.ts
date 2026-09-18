@@ -56,12 +56,25 @@ export async function loadMergedCompendium(): Promise<Compendium> {
     db.items.toArray(),
   ]);
 
-  for (const r of races) merged.races[r.key] = r;
-  for (const c of classes) merged.classes[c.key] = c;
-  for (const b of backgrounds) merged.backgrounds[b.key] = b;
-  for (const f of feats) merged.feats[f.key] = f;
-  for (const s of spells) merged.spells[s.key] = s;
-  for (const i of items) merged.items[i.key] = i;
+  // Custom (homebrew) entries always win, including over bundled data — that's
+  // the point of a custom override. Remote-synced entries, though, must not be
+  // able to silently replace a bundled entry sharing the same key: the bundled
+  // data is this app's actual ruleset (currently the 2024 PHB), while a remote
+  // sync source may use a different/older ruleset (dnd5eapi.co is 2014 SRD).
+  // A remote entry can still *add* new keys the bundled set doesn't have.
+  function applyLayer<T extends { key: string; source: { origin: string } }>(target: Record<string, T>, rows: T[]) {
+    for (const row of rows) {
+      if (row.source.origin === 'remote' && target[row.key] && target[row.key].source.origin === 'srd') continue;
+      target[row.key] = row;
+    }
+  }
+
+  applyLayer(merged.races, races);
+  applyLayer(merged.classes, classes);
+  applyLayer(merged.backgrounds, backgrounds);
+  applyLayer(merged.feats, feats);
+  applyLayer(merged.spells, spells);
+  applyLayer(merged.items, items);
 
   return merged;
 }
@@ -577,10 +590,28 @@ function sanitizeItem(i: Item, warnings: string[]): Item {
   };
 }
 
-/** Looks up any existing record for this key (a previous custom import, a remote sync, or bundled SRD data), to merge onto rather than replace. */
-async function existingBase<T>(table: { get(key: string): Promise<T | undefined> }, key: string, srdRecord: T | undefined): Promise<Partial<T> | undefined> {
+/**
+ * Looks up any existing record for this key (a previous custom import, a
+ * remote sync, or bundled SRD data), to merge onto rather than replace —
+ * unless `replace` is set, in which case a matching key is always dropped
+ * in favor of the hard defaults, so the imported entry alone determines
+ * the result (used when a file is a complete, corrected re-export that
+ * should fully take over, not patch around whatever was there before).
+ */
+async function existingBase<T>(
+  table: { get(key: string): Promise<T | undefined> },
+  key: string,
+  srdRecord: T | undefined,
+  replace: boolean,
+): Promise<Partial<T> | undefined> {
+  if (replace) return undefined;
   const existingCustom = await table.get(key);
   return existingCustom ?? srdRecord;
+}
+
+export interface ImportOptions {
+  /** Fully replace an existing entry sharing a key instead of merging onto it. Off by default (merge is safer for partial homebrew edits). */
+  replace?: boolean;
 }
 
 /**
@@ -591,7 +622,8 @@ async function existingBase<T>(table: { get(key: string): Promise<T | undefined>
  * and throws a clear, specific error when the file doesn't match anything
  * recognizable, rather than silently importing nothing.
  */
-export async function importCustomCompendium(rawInput: unknown): Promise<CustomImportResult> {
+export async function importCustomCompendium(rawInput: unknown, options: ImportOptions = {}): Promise<CustomImportResult> {
+  const replace = !!options.replace;
   if (!rawInput || typeof rawInput !== 'object' || Array.isArray(rawInput)) {
     throw new Error(
       'Expected a JSON object with one or more of these top-level keys: races, classes, backgrounds, feats, spells, items. ' +
@@ -631,7 +663,7 @@ export async function importCustomCompendium(rawInput: unknown): Promise<CustomI
     const rows = await Promise.all(
       Object.entries(races).map(async ([k, v]) => {
         const key = v.key ?? k;
-        const base = (await existingBase(db.races, key, srdCompendium.races[key])) ?? {
+        const base = (await existingBase(db.races, key, srdCompendium.races[key], replace)) ?? {
           size: 'Medium',
           speed: 30,
           abilityBonuses: [],
@@ -648,7 +680,7 @@ export async function importCustomCompendium(rawInput: unknown): Promise<CustomI
     const rows = await Promise.all(
       Object.entries(classes).map(async ([k, v]) => {
         const key = v.key ?? k;
-        const base = await existingBase(db.classes, key, srdCompendium.classes[key]);
+        const base = await existingBase(db.classes, key, srdCompendium.classes[key], replace);
         if (!base && !v.hitDie) warnings.push(`Class "${v.name ?? k}" has no hitDie; defaulting to d8.`);
         const merged = withDefaults(k, v, source, base ?? {
           hitDie: 8,
@@ -673,7 +705,7 @@ export async function importCustomCompendium(rawInput: unknown): Promise<CustomI
     const rows = await Promise.all(
       Object.entries(backgrounds).map(async ([k, v]) => {
         const key = v.key ?? k;
-        const base = (await existingBase(db.backgrounds, key, srdCompendium.backgrounds[key])) ?? {
+        const base = (await existingBase(db.backgrounds, key, srdCompendium.backgrounds[key], replace)) ?? {
           skillProficiencies: [],
           toolProficiencies: [],
           languages: 0,
@@ -690,7 +722,7 @@ export async function importCustomCompendium(rawInput: unknown): Promise<CustomI
     const rows = await Promise.all(
       Object.entries(feats).map(async ([k, v]) => {
         const key = v.key ?? k;
-        const base = (await existingBase(db.feats, key, srdCompendium.feats[key])) ?? { description: '' };
+        const base = (await existingBase(db.feats, key, srdCompendium.feats[key], replace)) ?? { description: '' };
         return sanitizeFeat(withDefaults(k, v, source, base) as Feat);
       }),
     );
@@ -701,7 +733,7 @@ export async function importCustomCompendium(rawInput: unknown): Promise<CustomI
     const rows = await Promise.all(
       Object.entries(spells).map(async ([k, v]) => {
         const key = v.key ?? k;
-        const base = (await existingBase(db.spells, key, srdCompendium.spells[key])) ?? {
+        const base = (await existingBase(db.spells, key, srdCompendium.spells[key], replace)) ?? {
           level: 0,
           school: 'Evocation',
           castingTime: '1 action',
@@ -723,7 +755,7 @@ export async function importCustomCompendium(rawInput: unknown): Promise<CustomI
     const rows = await Promise.all(
       Object.entries(items).map(async ([k, v]) => {
         const key = v.key ?? k;
-        const base = (await existingBase(db.items, key, srdCompendium.items[key])) ?? { type: 'gear' };
+        const base = (await existingBase(db.items, key, srdCompendium.items[key], replace)) ?? { type: 'gear' };
         return sanitizeItem(withDefaults(k, v, source, base) as Item, warnings);
       }),
     );

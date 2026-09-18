@@ -67,6 +67,12 @@ export interface Character {
   baseAbilityScores: AbilityScores;
   /** Manual ability score bonuses chosen by the player (e.g. feat ASIs, race "choose any" bonuses). */
   bonusAbilityScores: Partial<AbilityScores>;
+  /**
+   * 2024 rules: your Background (not your species) grants ability score
+   * increases — either +2 to one of its three listed abilities and +1 to a
+   * different one, or +1 to all three, player's choice.
+   */
+  backgroundAbilityChoice?: { mode: 'twoOne'; plusTwo: AbilityKey; plusOne: AbilityKey } | { mode: 'oneOneOne'; abilities: [AbilityKey, AbilityKey, AbilityKey] };
 
   skillProficiencies: SkillKey[];
   skillExpertise: SkillKey[];

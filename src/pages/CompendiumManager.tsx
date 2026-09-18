@@ -51,8 +51,7 @@ export default function CompendiumManager() {
   const [progress, setProgress] = useState<SyncProgress | null>(null);
   const [syncResult, setSyncResult] = useState<SyncResult | null>(null);
   const [importResult, setImportResult] = useState<string | null>(null);
-  const [packLoading, setPackLoading] = useState(false);
-  const [packStatus, setPackStatus] = useState<string | null>(null);
+  const [replaceOnImport, setReplaceOnImport] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const bump = useCompendiumVersion((s) => s.bump);
 
@@ -106,38 +105,18 @@ export default function CompendiumManager() {
     if (!file) return;
     try {
       const json = JSON.parse(await file.text()) as CustomCompendiumInput;
-      const result = await importCustomCompendium(json);
+      const result = await importCustomCompendium(json, { replace: replaceOnImport });
       bump();
       await refresh();
       const summary = Object.entries(result.counts)
         .filter(([, n]) => n > 0)
         .map(([k, n]) => `${n} ${k}`)
         .join(', ');
-      setImportResult(`Imported: ${summary || 'nothing found'}.${result.warnings.length ? ` Warnings: ${result.warnings.join(' ')}` : ''}`);
+      setImportResult(
+        `${replaceOnImport ? 'Replaced' : 'Imported'}: ${summary || 'nothing found'}.${result.warnings.length ? ` Warnings: ${result.warnings.join(' ')}` : ''}`,
+      );
     } catch (err) {
       alert(`Couldn’t import that file: ${(err as Error).message}`);
-    }
-  }
-
-  async function handleLoadCommunityPack() {
-    setPackLoading(true);
-    setPackStatus(null);
-    try {
-      const res = await fetch(`${import.meta.env.BASE_URL}data/dnd-data-pack.json`);
-      if (!res.ok) throw new Error(`Couldn't load the pack (${res.status} ${res.statusText}).`);
-      const json = await res.json();
-      const result = await importCustomCompendium(json);
-      bump();
-      await refresh();
-      const summary = Object.entries(result.counts)
-        .filter(([, n]) => n > 0)
-        .map(([k, n]) => `${n} ${k}`)
-        .join(', ');
-      setPackStatus(`Loaded: ${summary}.`);
-    } catch (err) {
-      setPackStatus(`Couldn't load the community pack: ${(err as Error).message}`);
-    } finally {
-      setPackLoading(false);
     }
   }
 
@@ -150,17 +129,19 @@ export default function CompendiumManager() {
     <div>
       <h1 className="mb-1 text-2xl font-bold">Compendium</h1>
       <p className="mb-6 max-w-3xl text-sm text-stone-500">
-        Every character is built from this rules library. It ships with a bundled SRD-based starter set, can be
-        refreshed from a free public D&amp;D 5e API, and can be extended or overridden with your own homebrew content.
+        Every character is built from this rules library, based on the <strong>2024 Player's Handbook</strong>. It can
+        be extended or overridden with your own homebrew content.
       </p>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <div className="card p-5">
           <h2 className="section-title">Update from the Internet</h2>
           <p className="mb-3 text-sm text-stone-500">
-            Pulls the full SRD spell list and equipment list from{' '}
-            <span className="font-mono text-xs">dnd5eapi.co</span> and merges them into your local compendium. Requires
-            an internet connection; your existing bundled data and homebrew content are never deleted by this.
+            Pulls the full spell list and equipment list from <span className="font-mono text-xs">dnd5eapi.co</span>{' '}
+            and merges them into your local compendium. <strong>That API is 2014-ruleset (SRD 5.1) content</strong> —
+            it can add spells/items this app doesn't have yet, but it will never overwrite this app's bundled 2024
+            data for a spell/item it already has, so it can't accidentally revert anything to the older ruleset.
+            Requires an internet connection; your bundled data and homebrew content are never deleted by this.
           </p>
           <button className="btn-primary" onClick={handleSync} disabled={syncing}>
             {syncing ? 'Syncing…' : 'Sync Now'}
@@ -213,9 +194,15 @@ export default function CompendiumManager() {
         <div className="card p-5">
           <h2 className="section-title">Custom / Homebrew Compendium</h2>
           <p className="mb-3 text-sm text-stone-500">
-            Import a JSON file with your own races, classes, backgrounds, feats, spells, or items. Entries use the same
-            key as an existing entry to override it, or a new key to add new content.
+            Import a JSON file with your own races, classes, backgrounds, feats, spells, or items. By default, an
+            entry reusing an existing key <em>merges</em> onto it (missing fields keep their old value) — safest for
+            a small homebrew tweak. Turn on full replace below when a file is a complete, corrected re-export that
+            should fully take over instead of patching around what was there.
           </p>
+          <label className="mb-3 flex items-center gap-2 text-sm">
+            <input type="checkbox" checked={replaceOnImport} onChange={(e) => setReplaceOnImport(e.target.checked)} />
+            Fully replace matching entries instead of merging
+          </label>
           <input ref={fileInputRef} type="file" accept="application/json" className="hidden" onChange={handleImportFile} />
           <button className="btn-primary" onClick={() => fileInputRef.current?.click()}>
             Import Custom Compendium
@@ -226,6 +213,10 @@ export default function CompendiumManager() {
           <button className="btn-ghost ml-2" onClick={handleClearCustom}>
             Clear Custom Data
           </button>
+          <p className="mt-2 text-xs text-stone-400">
+            If you loaded the old 2014-ruleset "Community Content Pack" in an earlier version of this app, use Clear
+            Custom Data to remove it — it's no longer offered since this app moved to the 2024 Player's Handbook.
+          </p>
           {importResult && <p className="mt-2 text-xs text-stone-500">{importResult}</p>}
           <details className="mt-3 text-xs text-stone-500">
             <summary className="cursor-pointer font-medium">Expected JSON shape</summary>
@@ -245,27 +236,6 @@ export default function CompendiumManager() {
 }`}</pre>
           </details>
         </div>
-      </div>
-
-      <div className="card mt-6 p-5">
-        <h2 className="section-title">Community Content Pack</h2>
-        <p className="mb-2 text-sm text-stone-500">
-          Adds 319 core Player's Handbook spells and 658 Dungeon Master's Guide magic items, bundled with the app (no
-          internet connection needed). Sourced from the{' '}
-          <span className="font-mono text-xs">nick-aschenbach/dnd-data</span> project on GitHub, filtered down to
-          official Wizards of the Coast, 2014-ruleset content only — everything else in that dataset (homebrew from
-          other publishers, the newer 2024 rulebooks, monster stat blocks) is left out, either because it doesn't
-          match this app's ruleset or because its structure was too unreliable to convert without risking wrong data.
-        </p>
-        <p className="mb-3 text-xs text-stone-500">
-          Note: none of this app's data sources — including this pack — include real Player's Handbook page numbers;
-          that information isn't published in any freely available dataset. Entries show which <em>book</em> they're
-          from where known, but not a page number.
-        </p>
-        <button className="btn-primary" onClick={handleLoadCommunityPack} disabled={packLoading}>
-          {packLoading ? 'Loading…' : 'Load Community Pack'}
-        </button>
-        {packStatus && <p className="mt-2 text-xs text-stone-500">{packStatus}</p>}
       </div>
 
       <div className="card mt-6 p-5">

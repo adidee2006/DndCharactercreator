@@ -1,6 +1,6 @@
 import type { Spell } from '../../types/compendium';
 
-const SRD = { origin: 'srd' as const, label: 'SRD 5.1' };
+const SRD = { origin: 'srd' as const, label: "Player's Handbook (2024)", book: "Player's Handbook (2024)" };
 
 function s(
   key: string,

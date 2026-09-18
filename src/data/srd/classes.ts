@@ -1,7 +1,7 @@
 import type { DndClass, ClassFeature, SpellSlotTable } from '../../types/compendium';
 import { FULL_CASTER_SLOTS, HALF_CASTER_SLOTS, PACT_MAGIC } from '../tables';
 
-const SRD = { origin: 'srd' as const, label: 'SRD 5.1' };
+const SRD = { origin: 'srd' as const, label: "Player's Handbook (2024)", book: "Player's Handbook (2024)" };
 
 function toSlotTable(rows: number[][]): SpellSlotTable {
   const table: SpellSlotTable = {};
@@ -44,6 +44,7 @@ export const classes: Record<string, DndClass> = {
     features: [
       feat(1, 'Rage', 'Bonus action to enter a rage: melee damage bonus, resistance to bludgeoning/piercing/slashing damage, advantage on Strength checks/saves.'),
       feat(1, 'Unarmored Defense', 'While not wearing armor, AC = 10 + Dex modifier + Con modifier.'),
+      feat(1, 'Weapon Mastery', 'You can use the mastery property of two kinds of weapons you are proficient with; you can swap one of those choices whenever you finish a long rest.'),
       feat(2, 'Reckless Attack', 'Attack with advantage on Strength-based melee attacks this turn, but attacks against you have advantage until your next turn.'),
       feat(2, 'Danger Sense', 'Advantage on Dexterity saving throws against effects you can see.'),
       feat(3, 'Primal Path', 'Choose a subclass that grants features at 3rd, 6th, 10th, and 14th level.'),
@@ -75,6 +76,36 @@ export const classes: Record<string, DndClass> = {
           feat(6, 'Aspect of the Beast', 'Gain a magical benefit tied to your totem animal, usable even outside of a rage (e.g. the Eagle grants no disadvantage on perception checks in low light and the ability to see 1 mile away clearly).'),
           feat(10, 'Spirit Walker', 'Cast commune with nature as a ritual, communing with a spirit of the land instead of a natural setting.'),
           feat(14, 'Totemic Attunement', 'Gain a further magical benefit tied to your totem animal while raging (e.g. the Bear lets you halve an attacker’s speed on a hit as a bonus action).'),
+        ],
+      },
+      {
+        key: 'wild-heart',
+        name: 'Path of the Wild Heart',
+        features: [
+          feat(3, 'Animal Speaker', 'You can cast Beast Sense and Speak with Animals without a spell slot, and choose an animal aspect (Bear, Eagle, or Wolf) that grants a passive benefit while raging.'),
+          feat(6, 'Aspect of the Wilds', 'Gain a magical benefit tied to your animal aspect, usable even outside of a rage.'),
+          feat(10, 'Nature Speaker', 'You can cast Commune with Nature without a spell slot.'),
+          feat(14, 'Power of the Wild Heart', 'Gain a further magical benefit tied to your animal aspect while raging.'),
+        ],
+      },
+      {
+        key: 'world-tree',
+        name: 'Path of the World Tree',
+        features: [
+          feat(3, 'Vitality of the Tree', 'While raging, you have resistance to necrotic and radiant damage, and can plant a rooted spirit anchor you can teleport back to.'),
+          feat(6, 'Branches of the Tree', 'Teleport to your rooted spirit anchor as a bonus action while raging, and grant nearby allies temporary hit points when you do.'),
+          feat(10, 'Battering Roots', 'Your melee weapon attacks while raging can push a target 10 feet away or pull it 10 feet closer.'),
+          feat(14, 'Travel Along the Tree', 'You and willing creatures within 10 feet of your spirit anchor can teleport to a location you’ve marked with your anchor before.'),
+        ],
+      },
+      {
+        key: 'zealot',
+        name: 'Path of the Zealot',
+        features: [
+          feat(3, 'Divine Fury', 'While raging, your first hit each turn deals extra necrotic or radiant damage; you also gain a bonus to death saves and reduced dying penalties.'),
+          feat(6, 'Warrior of the Gods', 'You can be restored to life by any spell that requires only a spell slot of 5th level or lower, without needing costly material components.'),
+          feat(10, 'Fanatical Focus', 'If you fail a saving throw while raging, you can reroll it once.'),
+          feat(14, 'Zealous Presence', 'Use a bonus action to grant up to ten allies within 60 feet advantage on attack rolls and saving throws until the start of your next turn.'),
         ],
       },
     ],
@@ -125,6 +156,26 @@ export const classes: Record<string, DndClass> = {
           feat(3, 'Combat Inspiration', 'A creature with your Bardic Inspiration die can add it to a weapon damage roll or to its AC against one attack.'),
           feat(6, 'Extra Attack', 'You can attack twice, instead of once, whenever you take the Attack action.'),
           feat(14, 'Battle Magic', 'When you cast a bard spell, you can make one weapon attack as a bonus action.'),
+        ],
+      },
+      {
+        key: 'dance',
+        name: 'College of Dance',
+        features: [
+          feat(3, 'Dazzling Footwork', 'Your unarmored AC can use Dexterity + Charisma, and you can use Bardic Inspiration on your own Dexterity or Constitution saves.'),
+          feat(3, 'Inspiring Movement', 'When you spend a Bardic Inspiration die, you or the recipient can move up to their speed without provoking opportunity attacks.'),
+          feat(6, 'Tandem Footwork', 'You and a creature that has your Bardic Inspiration can swap places or protect each other with a shared defensive dance.'),
+          feat(14, 'Prodigious Leap', 'Your jump distance is greatly increased, and you can grant this benefit to others as part of your dance.'),
+        ],
+      },
+      {
+        key: 'glamour',
+        name: 'College of Glamour',
+        features: [
+          feat(3, 'Mantle of Inspiration', 'Use a bonus action and a Bardic Inspiration die to grant temporary hit points and a burst of movement to several allies.'),
+          feat(3, 'Enthralling Performance', 'Perform for at least 1 minute to charm listeners who fail a Wisdom save, for up to 1 hour.'),
+          feat(6, 'Mantle of Majesty', 'Cast Command at will as a bonus action for 1 minute, without a spell slot, once per long rest.'),
+          feat(14, 'Unbreakable Majesty', 'Become strikingly beautiful for 1 minute; any creature that tries to attack you must first make a Charisma save or be unable to.'),
         ],
       },
     ],
@@ -180,6 +231,18 @@ export const classes: Record<string, DndClass> = {
           feat(6, 'Improved Flare', 'You can also use Warding Flare when a creature you can see within 30 feet attacks a creature other than you.'),
           feat(8, 'Potent Spellcasting', 'Add your Wisdom modifier to the damage you deal with any cleric cantrip.'),
           feat(17, 'Corona of Light', 'Use your action to radiate bright light in a 60-foot radius for 1 minute; enemies in the bright light have disadvantage on saves against your radiant/fire spells.'),
+        ],
+      },
+      {
+        key: 'trickery',
+        name: 'Trickery Domain',
+        features: [
+          feat(1, 'Blessing of the Trickster', 'Touch a willing creature to give it advantage on Stealth checks for up to 1 hour.'),
+          feat(1, 'Bonus Cantrip', 'Learn the mislead-adjacent illusion cantrip Minor Illusion, if you don’t already know it; it doesn’t count against your cantrips known.'),
+          feat(2, 'Channel Divinity: Invoke Duplicity', 'Expend a Channel Divinity to create an illusory duplicate of yourself for up to 1 minute, which you can speak and cast spells through, and that grants advantage on attacks against foes adjacent to it.'),
+          feat(6, 'Channel Divinity: Cloak of Shadows', 'Expend a Channel Divinity to turn invisible until the end of your next turn or until you attack, deal damage, or cast a spell.'),
+          feat(8, 'Divine Strike', 'Once per turn, your weapon attacks deal an extra 1d8 poison damage (2d8 at 14th level).'),
+          feat(17, 'Improved Duplicity', 'You can create up to four duplicates of yourself instead of one with Invoke Duplicity.'),
         ],
       },
       {
@@ -250,6 +313,28 @@ export const classes: Record<string, DndClass> = {
           feat(14, 'Thousand Forms', 'Cast the alter self spell at will, without expending a spell slot.'),
         ],
       },
+      {
+        key: 'sea',
+        name: 'Circle of the Sea',
+        features: [
+          feat(2, 'Wrath of the Sea', 'As a bonus action, surround yourself with churning water for 1 minute, dealing cold damage to nearby creatures and granting yourself a swim speed.'),
+          feat(2, 'Aquatic Affinity', 'You gain a swim speed equal to your walking speed, and can breathe underwater.'),
+          feat(6, 'Storm Born', 'Wild Shape into aquatic or amphibious beasts more freely, and you gain resistance to cold damage while Wild Shaped.'),
+          feat(10, 'Oceanic Gift', 'Grant an ally you can see a swim speed and the ability to breathe water for a short duration.'),
+          feat(14, 'Reactive Surge', 'Use your reaction to teleport a short distance through water and unleash a burst of wrath-of-the-sea energy.'),
+        ],
+      },
+      {
+        key: 'stars',
+        name: 'Circle of the Stars',
+        features: [
+          feat(2, 'Star Map', 'You gain a star map you can use to cast Guidance or Guiding Bolt without a spell slot, and to recall constellation lore.'),
+          feat(2, 'Starry Form', 'Use a bonus action to enter a starry form (Archer, Chalice, or Dragon) for 10 minutes, granting a magical benefit and letting your unarmed strikes deal extra radiant damage.'),
+          feat(6, 'Cosmic Omen', 'After a long rest, roll on the Cosmic Omen table (Weal or Woe) to gain a reactive bonus you can apply to an ally’s or enemy’s roll.'),
+          feat(10, 'Twinkling Constellations', 'Your Starry Form constellations grow more powerful, granting flight in Dragon form and other upgraded benefits.'),
+          feat(14, 'Full of Stars', 'While in Starry Form, you have resistance to bludgeoning, piercing, and slashing damage.'),
+        ],
+      },
     ],
     spellcasting: {
       ability: 'wis',
@@ -275,8 +360,10 @@ export const classes: Record<string, DndClass> = {
     subclassLevel: 3,
     features: [
       feat(1, 'Fighting Style', 'Adopt a particular style of fighting as your specialty (Archery, Defense, Dueling, etc).'),
-      feat(1, 'Second Wind', 'Bonus action to regain 1d10 + fighter level hit points, once per short/long rest.'),
+      feat(1, 'Second Wind', 'Bonus action to regain 1d10 + fighter level hit points, once per short/long rest (2 uses at level 5, 3 at level 9).'),
+      feat(1, 'Weapon Mastery', 'You can use the mastery property of three kinds of weapons you are proficient with; you can swap one of those choices whenever you finish a long rest.'),
       feat(2, 'Action Surge', 'Take one additional action on your turn, once per short/long rest.'),
+      feat(2, 'Tactical Mind', 'When you fail an ability check, you can expend a use of Second Wind (without regaining hit points) to add 1d10 to the check, potentially turning it into a success.'),
       feat(3, 'Martial Archetype', 'Choose a subclass that grants features at 3rd, 7th, 10th, 15th, and 18th level.'),
       feat(5, 'Extra Attack', 'You can attack twice, instead of once, whenever you take the Attack action.'),
       feat(9, 'Indomitable', 'You can reroll a failed saving throw; once per long rest (more at higher levels).'),
@@ -317,6 +404,17 @@ export const classes: Record<string, DndClass> = {
           feat(10, 'Eldritch Strike', 'When you hit a creature with a weapon attack, it has disadvantage on its next save against a spell you cast before the end of your next turn.'),
           feat(15, 'Arcane Charge', 'When you use Action Surge, you can teleport up to 30 feet as part of that action.'),
           feat(18, 'Improved War Magic', 'You can use War Magic when you cast any wizard spell, not just a cantrip.'),
+        ],
+      },
+      {
+        key: 'psi-warrior',
+        name: 'Psi Warrior',
+        features: [
+          feat(3, 'Psionic Power', 'You have a pool of Psionic Energy dice (d6s). Use them to fuel Protective Field (reduce damage to yourself or an ally), Psi-Powered Leap (fly instead of jump), or Telekinetic Movement (shove/pull creatures or objects).'),
+          feat(7, 'Telekinetic Adept', 'Gain the Telekinetic Thrust option (push/knock prone a creature you hit) and can hover briefly using Psi-Powered Leap.'),
+          feat(10, 'Guarded Mind', 'You have resistance to psychic damage, and can spend a Psionic Energy die to end an effect causing you to be charmed or frightened.'),
+          feat(15, 'Bulwark of Force', 'Spend a Psionic Energy die to grant yourself and nearby allies resistance to one damage type for 1 minute.'),
+          feat(18, 'Telekinetic Master', 'Cast telekinesis at will without a spell slot, once per turn.'),
         ],
       },
     ],
@@ -377,6 +475,28 @@ export const classes: Record<string, DndClass> = {
           feat(17, 'Opportunist', 'When a creature within 5 feet is hit by an attack from someone other than you, use your reaction to make a melee attack against that creature.'),
         ],
       },
+      {
+        key: 'mercy',
+        name: 'Way of Mercy',
+        features: [
+          feat(3, 'Implements of Mercy', 'Gain proficiency with the Medicine and Insight skills (if not already proficient) and a healer’s kit.'),
+          feat(3, 'Hand of Healing', 'Spend 1 ki as an action to touch a creature and restore hit points equal to your Martial Arts die + your Wisdom modifier.'),
+          feat(3, 'Hand of Harm', 'Spend 1 ki when you hit with an unarmed strike to deal extra necrotic damage.'),
+          feat(6, 'Physician’s Touch', 'Your Hand of Healing can also end one disease or condition; your Hand of Harm can also give the target disadvantage on its next save.'),
+          feat(11, 'Flurry of Healing and Harm', 'Use Hand of Healing as part of your Flurry of Blows, using ki only once.'),
+          feat(17, 'Hand of Ultimate Mercy', 'Once per long rest, spend 5 ki to return a creature that died within the last day to life with a small pool of hit points.'),
+        ],
+      },
+      {
+        key: 'elements',
+        name: 'Way of the Elements',
+        features: [
+          feat(3, 'Elemental Attunement', 'Spend ki to create minor elemental effects, and learn to spend ki to manifest an elemental discipline (such as Fangs of the Fire Snake or Rush of the Gale Spirits).'),
+          feat(6, 'Elemental Burst', 'Your elemental disciplines can now affect a wider area and deal more damage as you spend more ki.'),
+          feat(11, 'Stronger Elemental Attunement', 'Learn an additional elemental discipline, and your existing disciplines grow more potent.'),
+          feat(17, 'Master of the Elements', 'Your mastery of the elements lets you manifest two disciplines at once by spending a bonus action alongside your normal ki expenditure.'),
+        ],
+      },
     ],
   },
 
@@ -396,6 +516,7 @@ export const classes: Record<string, DndClass> = {
     features: [
       feat(1, 'Divine Sense', 'Detect the presence of celestials, fiends, and undead within 60 feet.'),
       feat(1, 'Lay on Hands', 'A pool of healing power equal to 5 × paladin level that you can use to heal.'),
+      feat(1, 'Weapon Mastery', 'You can use the mastery property of two kinds of weapons you are proficient with; you can swap one of those choices whenever you finish a long rest.'),
       feat(2, 'Fighting Style', 'Adopt a particular style of fighting as your specialty.'),
       feat(2, 'Spellcasting', 'You can cast paladin spells using Charisma.'),
       feat(2, 'Divine Smite', 'Expend a spell slot to deal extra radiant damage on a melee weapon hit.'),
@@ -441,6 +562,17 @@ export const classes: Record<string, DndClass> = {
           feat(20, 'Avenging Angel', 'Transform for 1 hour, sprouting wings that grant a 60-foot flying speed; enemies within 30 feet who start their turn there must save or be frightened of you.'),
         ],
       },
+      {
+        key: 'glory',
+        name: 'Oath of Glory',
+        features: [
+          feat(3, 'Channel Divinity: Peerless Athlete', 'Expend a Channel Divinity to gain advantage on Strength, Dexterity, or Constitution checks and increase your jump distance for 10 minutes.'),
+          feat(3, 'Channel Divinity: Inspiring Smite', 'Immediately after casting Divine Smite, expend a Channel Divinity to distribute temporary hit points among nearby allies.'),
+          feat(7, 'Aura of Alacrity', 'Your walking speed increases by 10 feet, and this bonus extends to nearby allies when they move toward an enemy on their turn.'),
+          feat(15, 'Glorious Defense', 'Use your reaction to grant yourself or a creature you can see a bonus to AC against an attack, potentially causing it to miss, and make a melee attack against the attacker.'),
+          feat(20, 'Living Legend', 'Once per long rest, gain advantage on all attack rolls, ability checks, and saving throws made with your primary ability for 1 minute, and automatically succeed on failed checks by expending uses.'),
+        ],
+      },
     ],
     spellcasting: {
       ability: 'cha',
@@ -466,6 +598,7 @@ export const classes: Record<string, DndClass> = {
     features: [
       feat(1, 'Favored Enemy', 'You have significant experience with a type of enemy: advantage on tracking and recalling information.'),
       feat(1, 'Natural Explorer', 'You are particularly familiar with one type of natural environment.'),
+      feat(1, 'Weapon Mastery', 'You can use the mastery property of two kinds of weapons you are proficient with; you can swap one of those choices whenever you finish a long rest.'),
       feat(2, 'Fighting Style', 'Adopt a particular style of fighting as your specialty.'),
       feat(2, 'Spellcasting', 'You can cast ranger spells using Wisdom.'),
       feat(3, 'Ranger Archetype', 'Choose a subclass that grants features at 3rd, 7th, 11th, and 15th level.'),
@@ -499,6 +632,28 @@ export const classes: Record<string, DndClass> = {
           feat(15, 'Share Spells', 'When you cast a spell targeting yourself, you can also affect your companion if it’s within 30 feet.'),
         ],
       },
+      {
+        key: 'fey-wanderer',
+        name: 'Fey Wanderer',
+        features: [
+          feat(3, 'Dreadful Strikes', 'Once per turn, your weapon attacks deal an extra 1d4 psychic damage.'),
+          feat(3, 'Otherworldly Glamour', 'Gain proficiency in a Charisma skill and add your Wisdom modifier to Charisma checks.'),
+          feat(7, 'Beguiling Twist', 'You and nearby allies have advantage on saves against being charmed or frightened, and you can turn a failed save into a success for a creature.'),
+          feat(11, 'Fey Reinforcements', 'Cast Summon Fey once without a spell slot per long rest.'),
+          feat(15, 'Misty Wanderer', 'Cast Misty Step without a spell slot, and can bring a willing creature with you.'),
+        ],
+      },
+      {
+        key: 'gloom-stalker',
+        name: 'Gloom Stalker',
+        features: [
+          feat(3, 'Dread Ambusher', 'You gain extra speed and a bonus attack dealing extra damage on the first turn of combat, and you gain darkvision (or increased range).'),
+          feat(3, 'Umbral Sight', 'You gain darkvision, or increase your existing darkvision by 30 feet, and you are invisible to darkvision-based sight in darkness.'),
+          feat(7, 'Iron Mind', 'Gain proficiency in Wisdom saving throws (or another save if already proficient).'),
+          feat(11, 'Stalker’s Flurry', 'Once per turn when you miss with an attack, you can make another weapon attack as part of the same action.'),
+          feat(15, 'Shadowy Dodge', 'When a creature you can see attacks you, use your reaction to impose disadvantage on the roll.'),
+        ],
+      },
     ],
     spellcasting: {
       ability: 'wis',
@@ -525,6 +680,7 @@ export const classes: Record<string, DndClass> = {
       feat(1, 'Expertise', 'Choose two skill proficiencies (or one skill and thieves’ tools); double your proficiency bonus for them.'),
       feat(1, 'Sneak Attack', 'Deal extra damage (scales with level) once per turn when you have advantage or an ally is within 5 feet of the target.'),
       feat(1, 'Thieves’ Cant', 'You know thieves’ cant, a secret mix of dialect, jargon, and code.'),
+      feat(1, 'Weapon Mastery', 'You can use the mastery property of one kind of weapon you are proficient with (Simple weapons, or a Martial weapon with Finesse or Light); you can swap this choice whenever you finish a long rest.'),
       feat(2, 'Cunning Action', 'Use a bonus action to Dash, Disengage, or Hide.'),
       feat(3, 'Roguish Archetype', 'Choose a subclass that grants features at 3rd, 9th, 13th, and 17th level.'),
       feat(5, 'Uncanny Dodge', 'Use your reaction to halve the damage of an attack that hits you.'),
@@ -567,6 +723,17 @@ export const classes: Record<string, DndClass> = {
           feat(9, 'Magical Ambush', 'If you are hidden from a creature when you cast a spell on it, it has disadvantage on any save against the spell.'),
           feat(13, 'Versatile Trickster', 'Use your mage hand to distract a target, giving you advantage on attack rolls against it this turn.'),
           feat(17, 'Spell Thief', 'When a creature you can see casts a spell targeting you, you can use your reaction to force a save; on a failure, the spell has no effect on you and you steal it, able to cast it once yourself.'),
+        ],
+      },
+      {
+        key: 'soulknife',
+        name: 'Soulknife',
+        features: [
+          feat(3, 'Psionic Power', 'Manifest a pair of psychic blades usable as a melee or thrown weapon (1d6 psychic damage), fueled by Psionic Energy dice usable for Psychic Whispers (telepathy) and Psi-Bolstered Knack (reroll a failed check).'),
+          feat(3, 'Psychic Whispers', 'Telepathically communicate with creatures you can see within 60 feet for a limited time after a rest.'),
+          feat(9, 'Soul Blades', 'Gain the Homing Strikes option (reroll a missed psychic blade attack) and Psychic Teleportation (teleport to where a thrown psychic blade lands).'),
+          feat(13, 'Psychic Veil', 'Turn invisible for up to 1 hour, once per long rest (or by spending Psionic Energy dice).'),
+          feat(17, 'Rend Mind', 'When you hit a creature with a psychic blade, it must save or be stunned for 1 minute.'),
         ],
       },
     ],
@@ -615,6 +782,28 @@ export const classes: Record<string, DndClass> = {
           feat(6, 'Bend Luck', 'Spend 2 sorcery points to add or subtract 1d4 from another creature’s attack roll, ability check, or saving throw.'),
           feat(14, 'Controlled Chaos', 'Roll twice on the Wild Magic Surge table and choose which result to apply.'),
           feat(18, 'Spell Bombardment', 'When you roll damage for a spell and roll the maximum on a die, roll that die again and add it to the damage.'),
+        ],
+      },
+      {
+        key: 'aberrant-mind',
+        name: 'Aberrant Mind',
+        features: [
+          feat(1, 'Psionic Spells', 'Learn additional spells (such as Mind Sliver, Dissonant Whispers, Detect Thoughts) that don’t count against your spells known, and can cast some without verbal/somatic components.'),
+          feat(1, 'Telepathic Speech', 'Telepathically speak to a creature you can see within 30 feet, and it can reply in kind.'),
+          feat(6, 'Psionic Sorcery', 'Cast your Aberrant Mind spells without a spell slot a limited number of times per long rest.'),
+          feat(14, 'Revelation in Flesh', 'Your body warps to grant you a swim speed and either a flying speed, ethereal step, or reach benefit for 10 minutes.'),
+          feat(18, 'Warping Implosion', 'Teleport up to 30 feet and pull creatures near your destination toward you, dealing force damage.'),
+        ],
+      },
+      {
+        key: 'clockwork-soul',
+        name: 'Clockwork Soul',
+        features: [
+          feat(1, 'Clockwork Magic', 'Learn additional spells (such as Alarm, Protection from Evil and Good, Dispel Magic) that don’t count against your spells known.'),
+          feat(1, 'Restore Balance', 'When a creature within 60 feet is about to roll with advantage or disadvantage, you can use your reaction to negate that, once per short/long rest (more with sorcery points).'),
+          feat(6, 'Bastion of Law', 'Spend sorcery points to grant a creature a shield of protective energy that absorbs damage.'),
+          feat(14, 'Trance of Order', 'While not incapacitated, ability checks you make can’t be rolled with disadvantage, and you treat a d20 roll of 9 or lower on an attack roll as a 10.'),
+          feat(18, 'Clockwork Cavalcade', 'Summon a burst of clockwork magic that repairs objects/constructs, heals allies, and damages fiends/undead within 30 feet.'),
         ],
       },
     ],
@@ -682,6 +871,17 @@ export const classes: Record<string, DndClass> = {
           feat(14, 'Create Thrall', 'Use your action to charm an incapacitated humanoid indefinitely, and communicate with it telepathically.'),
         ],
       },
+      {
+        key: 'celestial',
+        name: 'The Celestial',
+        features: [
+          feat(1, 'Bonus Cantrips', 'Learn the Sacred Flame and Light cantrips; they don’t count against your cantrips known.'),
+          feat(1, 'Healing Light', 'Gain a pool of d6s you can spend as a bonus action to heal a creature within 60 feet.'),
+          feat(6, 'Radiant Soul', 'Add your Charisma modifier to the radiant/fire damage of any spell you cast, and gain resistance to radiant damage.'),
+          feat(10, 'Celestial Resilience', 'You and nearby allies gain temporary hit points after a short or long rest.'),
+          feat(14, 'Searing Vengeance', 'When reduced to 0 hit points but not killed outright, you can instead rise with half your hit points and unleash radiant energy that damages and blinds nearby enemies.'),
+        ],
+      },
     ],
     spellcasting: {
       ability: 'cha',
@@ -715,7 +915,7 @@ export const classes: Record<string, DndClass> = {
     subclasses: [
       {
         key: 'evocation',
-        name: 'School of Evocation',
+        name: 'Evoker',
         features: [
           feat(2, 'Evocation Savant', 'The gold and time you must spend to copy an evocation spell into your spellbook is halved.'),
           feat(2, 'Sculpt Spells', 'Choose allies caught in your evocation spells to automatically succeed their saves and take no damage.'),
@@ -726,7 +926,7 @@ export const classes: Record<string, DndClass> = {
       },
       {
         key: 'abjuration',
-        name: 'School of Abjuration',
+        name: 'Abjurer',
         features: [
           feat(2, 'Abjuration Savant', 'The gold and time you must spend to copy an abjuration spell into your spellbook is halved.'),
           feat(2, 'Arcane Ward', 'Casting an abjuration spell creates a shield of magical energy (hit points = 2 × wizard level + Int modifier) that absorbs damage until depleted.'),
@@ -737,13 +937,24 @@ export const classes: Record<string, DndClass> = {
       },
       {
         key: 'divination',
-        name: 'School of Divination',
+        name: 'Diviner',
         features: [
           feat(2, 'Divination Savant', 'The gold and time you must spend to copy a divination spell into your spellbook is halved.'),
           feat(2, 'Portent', 'Roll two d20s after a long rest; you can replace any attack roll, ability check, or saving throw made by you or a creature you can see with one of these rolls.'),
           feat(6, 'Expert Divination', 'When you cast a divination spell of 2nd level or higher using a spell slot, regain one expended spell slot of lower level.'),
           feat(10, 'The Third Eye', 'Use your action to gain darkvision, see invisible creatures, read any language, or see the true form of a shapechanged/polymorphed creature, until you use this feature again.'),
           feat(14, 'Greater Portent', 'Roll three d20s for your Portent feature instead of two.'),
+        ],
+      },
+      {
+        key: 'illusion',
+        name: 'Illusionist',
+        features: [
+          feat(2, 'Illusion Savant', 'The gold and time you must spend to copy an illusion spell into your spellbook is halved.'),
+          feat(2, 'Improved Minor Illusion', 'Learn the Minor Illusion cantrip (or gain a bonus one), and it can create both a sound and an image with a single casting.'),
+          feat(6, 'Malleable Illusions', 'You can change the nature of an illusion you’ve already cast, as long as you can see it and spend an action.'),
+          feat(10, 'Illusory Self', 'Use your reaction to interpose an illusory duplicate of yourself between you and an attacker, causing the attack to automatically miss.'),
+          feat(14, 'Illusory Reality', 'Make one inanimate, nonmagical object within an illusion you’ve created briefly real for a short time.'),
         ],
       },
     ],

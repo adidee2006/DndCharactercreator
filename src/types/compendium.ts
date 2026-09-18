@@ -162,6 +162,10 @@ export interface Background {
   languages: number;
   equipment: string[];
   feature: { name: string; description: string };
+  /** The three abilities this background lets you increase (2024 rules: +2/+1 split or +1/+1/+1 across these). */
+  abilityScores?: AbilityKey[];
+  /** Feat key automatically granted by this background (2024 rules: every background grants an Origin feat). */
+  originFeat?: string;
   personalityTraits?: string[];
   ideals?: string[];
   bonds?: string[];
@@ -172,6 +176,8 @@ export interface Feat {
   key: string;
   name: string;
   source: SourceInfo;
+  /** 2024 rules: Origin feats are granted by background/level 1, General feats need level 4+ and an ASI slot, Epic Boons need level 19+. */
+  category?: 'origin' | 'general' | 'epic';
   prerequisite?: string;
   description: string;
   abilityBonusChoice?: { abilities: AbilityKey[]; amount: number };
@@ -229,6 +235,8 @@ export interface Item {
   damageType?: string;
   weaponProperties?: string[];
   weaponCategory?: 'simple' | 'martial';
+  /** 2024 rules: the weapon mastery property this weapon grants access to when a class feature lets you use it (Cleave, Graze, Nick, Push, Sap, Slow, Topple, Vex). */
+  masteryProperty?: 'Cleave' | 'Graze' | 'Nick' | 'Push' | 'Sap' | 'Slow' | 'Topple' | 'Vex';
   // armor-specific
   armorClassBase?: number;
   armorClassAddDex?: boolean;

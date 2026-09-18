@@ -288,6 +288,7 @@ export default function LevelUp() {
                     <option value="">Choose a feat…</option>
                     {Object.values(compendium.feats)
                       .filter((f) => !character.feats.includes(f.key))
+                      .filter((f) => (f.category ?? 'general') === 'general' || (f.category === 'epic' && newLevel >= 19))
                       .map((f) => (
                         <option key={f.key} value={f.key}>
                           {f.name}

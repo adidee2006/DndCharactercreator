@@ -32,6 +32,14 @@ export function getFinalAbilityScores(character: Character, compendium: Compendi
     }
   }
 
+  const bgChoice = character.backgroundAbilityChoice;
+  if (bgChoice?.mode === 'twoOne') {
+    scores[bgChoice.plusTwo] += 2;
+    scores[bgChoice.plusOne] += 1;
+  } else if (bgChoice?.mode === 'oneOneOne') {
+    for (const a of bgChoice.abilities) scores[a] += 1;
+  }
+
   for (const key of ABILITY_KEYS) {
     const bonus = character.bonusAbilityScores[key];
     if (bonus) scores[key] += bonus;
