@@ -110,6 +110,25 @@ export function getMaxAvailableSpellLevel(character: Character, compendium: Comp
   return { maxLevel, hasCantrips };
 }
 
+/**
+ * Spell keys granted for free by the character's subclasses at their current
+ * level (a Paladin's oath spells, a Cleric's domain spells, etc.) — always
+ * prepared, and not counted against the character's normal known/prepared
+ * spell limits.
+ */
+export function getSubclassBonusSpells(character: Character, compendium: Compendium): string[] {
+  const keys = new Set<string>();
+  for (const cl of character.classes) {
+    const cls = compendium.classes[cl.classKey];
+    const subclass = cls?.subclasses.find((s) => s.key === cl.subclassKey);
+    if (!subclass?.bonusSpells) continue;
+    for (const entry of subclass.bonusSpells) {
+      if (entry.level <= cl.level) entry.spellKeys.forEach((k) => keys.add(k));
+    }
+  }
+  return [...keys];
+}
+
 export interface SpellCounts {
   cantripLimit: number;
   spellLimit: number;

@@ -2,6 +2,8 @@ export interface FightingStyle {
   key: string;
   name: string;
   description: string;
+  /** When set, only these classes (by class key) can choose this style — a 2024-rules class-specific option. */
+  classRestriction?: string[];
 }
 
 /**
@@ -57,6 +59,23 @@ export const fightingStyles: FightingStyle[] = [
     name: 'Unarmed Fighting',
     description: 'Your unarmed strikes deal 1d6 (or 1d8 if you have no weapon and no shield in hand) bludgeoning damage on a hit, and you can make a bonus-action unarmed strike or grapple attempt against a creature you damaged this turn.',
   },
+  {
+    key: 'blessed-warrior',
+    name: 'Blessed Warrior',
+    description: 'You learn two cantrips of your choice from the Cleric spell list. They count as Paladin spells for you, and Charisma is your spellcasting ability for them. Whenever you gain a Paladin level, you can replace one of these cantrips with another Cleric cantrip.',
+    classRestriction: ['paladin'],
+  },
+  {
+    key: 'druidic-warrior',
+    name: 'Druidic Warrior',
+    description: 'You learn two cantrips of your choice from the Druid spell list. They count as Ranger spells for you, and Wisdom is your spellcasting ability for them. Whenever you gain a Ranger level, you can replace one of these cantrips with another Druid cantrip.',
+    classRestriction: ['ranger'],
+  },
 ];
 
 export const fightingStylesByKey: Record<string, FightingStyle> = Object.fromEntries(fightingStyles.map((f) => [f.key, f]));
+
+/** The shared styles, plus any class-restricted styles (Blessed Warrior, Druidic Warrior) that this class key can pick. */
+export function availableFightingStyles(classKey: string | undefined): FightingStyle[] {
+  return fightingStyles.filter((fs) => !fs.classRestriction || (classKey != null && fs.classRestriction.includes(classKey)));
+}

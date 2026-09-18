@@ -22,14 +22,16 @@ import {
   getPactMagicSlots,
   getCarryingCapacity,
   formatModifier,
+  getExhaustionPenalty,
 } from '../lib/calc';
+import { knownConditionEffect } from '../data/conditions';
 import { generateCharacterSheetPdf } from '../lib/pdfExport';
 import { characterToExportFile, downloadJson, slugFilename } from '../lib/jsonExport';
 import { totalValueInGp, autoExchange, formatGp } from '../lib/currency';
 import { itemDescription } from '../lib/itemSummary';
 import { sourceCitation } from '../lib/sourceCitation';
-import { isProficientWithItem, isEligibleForFeat, getMaxAvailableSpellLevel, getSpellCounts } from '../lib/eligibility';
-import { fightingStyles, fightingStylesByKey } from '../data/srd/fightingStyles';
+import { isProficientWithItem, isEligibleForFeat, getMaxAvailableSpellLevel, getSpellCounts, getSubclassBonusSpells } from '../lib/eligibility';
+import { availableFightingStyles, fightingStylesByKey } from '../data/srd/fightingStyles';
 import { v4 as uuid } from 'uuid';
 
 const TABS = ['Main', 'Combat', 'Spells', 'Inventory', 'Features', 'Bio'] as const;
@@ -268,6 +270,38 @@ function CombatTab({
   const [damageAmount, setDamageAmount] = useState(0);
   const hitDice = getHitDice(character, compendium);
   const carry = getCarryingCapacity(character, compendium);
+  const totalHitDice = hitDice.reduce((sum, hd) => sum + hd.count, 0);
+  const hitDiceRemaining = Math.max(0, totalHitDice - character.hitDiceUsed);
+  const mods = getAbilityModifiers(character, compendium);
+  const [hitDiceToSpend, setHitDiceToSpend] = useState(1);
+
+  function takeShortRest() {
+    const spend = Math.max(0, Math.min(hitDiceToSpend, hitDiceRemaining));
+    // Average roll per die (rounded up) + Constitution modifier, floored at 0 per die spent.
+    // hitDiceUsed is a flat count rather than per-die-size, so this uses the character's
+    // first (most common) hit die as the representative size for multiclass characters.
+    const primaryDie = hitDice[0]?.die ?? 8;
+    const perDie = Math.max(0, Math.ceil((primaryDie + 1) / 2) + mods.con);
+    const healed = perDie * spend;
+    update({
+      hitDiceUsed: character.hitDiceUsed + spend,
+      hpCurrent: Math.min(hpMax, character.hpCurrent + healed),
+      pactSlotsUsed: 0,
+    });
+  }
+
+  function takeLongRest() {
+    const recoveredDice = Math.max(1, Math.floor(totalHitDice / 2));
+    update({
+      hpCurrent: hpMax,
+      hpTemp: 0,
+      spellSlotsUsed: {},
+      pactSlotsUsed: 0,
+      hitDiceUsed: Math.max(0, character.hitDiceUsed - recoveredDice),
+      exhaustion: Math.max(0, character.exhaustion - 1),
+      deathSaves: { successes: 0, failures: 0 },
+    });
+  }
 
   function applyDamage() {
     let temp = character.hpTemp;
@@ -321,7 +355,9 @@ function CombatTab({
             onChange={(e) => update({ fightingStyle: e.target.value || undefined })}
           >
             <option value="">None</option>
-            {fightingStyles.map((fs) => (
+            {Array.from(
+              new Map(character.classes.flatMap((cl) => availableFightingStyles(cl.classKey)).map((fs) => [fs.key, fs])).values(),
+            ).map((fs) => (
               <option key={fs.key} value={fs.key}>
                 {fs.name}
               </option>
@@ -390,6 +426,33 @@ function CombatTab({
             Spend Hit Die
           </button>
         </div>
+
+        <div className="money-card">
+          <h3 className="section-title mb-2">Rest</h3>
+          <div className="mb-3 flex flex-wrap items-center gap-2">
+            <label className="text-sm text-stone-500">Spend</label>
+            <input
+              type="number"
+              min={1}
+              max={Math.max(1, hitDiceRemaining)}
+              className="coin-input"
+              value={hitDiceToSpend}
+              onChange={(e) => setHitDiceToSpend(Math.max(1, Number(e.target.value) || 1))}
+            />
+            <label className="text-sm text-stone-500">hit {hitDiceToSpend === 1 ? 'die' : 'dice'} to heal</label>
+            <button className="btn-secondary" onClick={takeShortRest} disabled={hitDiceRemaining === 0}>
+              Take Short Rest
+            </button>
+          </div>
+          <button className="btn-primary" onClick={takeLongRest}>
+            Take Long Rest
+          </button>
+          <p className="mt-2 text-xs text-stone-500">
+            Short rest: heals average roll per hit die spent + Con modifier, and restores pact magic slots. Long rest:
+            restores HP and all spell slots, clears temp HP, recovers half your hit dice (min 1), reduces exhaustion
+            by 1, and resets death saves.
+          </p>
+        </div>
       </div>
 
       <div className="space-y-3">
@@ -449,6 +512,34 @@ function CombatTab({
             onChange={(e) => update({ conditions: e.target.value.split(',').map((s) => s.trim()).filter(Boolean) })}
           />
         </div>
+        {(character.exhaustion > 0 || character.conditions.length > 0) && (
+          <div className="rounded-lg border border-stone-300 p-3 text-xs dark:border-stone-700">
+            <p className="mb-1.5 font-semibold text-stone-600 dark:text-stone-300">Active Effects</p>
+            <ul className="space-y-1.5">
+              {character.exhaustion > 0 && (
+                <li>
+                  <strong>Exhaustion ({character.exhaustion}).</strong>{' '}
+                  <span className="text-stone-500">
+                    {formatModifier(getExhaustionPenalty(character))} to ability checks, attack rolls, and saving throws; speed
+                    reduced by {5 * character.exhaustion} ft — both already applied above.
+                    {character.exhaustion >= 6 ? ' At level 6 you die.' : ''}
+                  </span>
+                </li>
+              )}
+              {character.conditions.map((c) => {
+                const effect = knownConditionEffect(c);
+                return (
+                  <li key={c}>
+                    <strong>{c}.</strong>{' '}
+                    <span className="text-stone-500">
+                      {effect ?? 'Not a recognized condition name — no rules reminder available, but it’s still noted above.'}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        )}
         <p className="text-xs text-stone-500">
           Carrying Capacity: {carry.carryCapacity} lb • Encumbered at {carry.encumbered} lb
         </p>
@@ -483,6 +574,11 @@ function SpellsTab({
   const known = character.spellsKnown.map((k) => compendium.spells[k]).filter(Boolean);
   const byLevel = new Map<number, typeof known>();
   for (const sp of known) byLevel.set(sp.level, [...(byLevel.get(sp.level) ?? []), sp]);
+
+  const bonusSpells = getSubclassBonusSpells(character, compendium)
+    .map((k) => compendium.spells[k])
+    .filter(Boolean)
+    .sort((a, b) => a.level - b.level || a.name.localeCompare(b.name));
 
   const classKeys = character.classes.map((c) => c.classKey);
   const { maxLevel } = getMaxAvailableSpellLevel(character, compendium);
@@ -600,6 +696,42 @@ function SpellsTab({
                 +
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {bonusSpells.length > 0 && (
+        <div className="mb-4">
+          <h3 className="section-title">Bonus Spells (Always Prepared)</h3>
+          <p className="mb-2 text-xs text-stone-500">Granted free by your subclass — these don't count against your known/prepared limits above.</p>
+          <div className="space-y-1.5">
+            {bonusSpells.map((sp) => {
+              const isOpen = !!expanded[`bonus-${sp.key}`];
+              return (
+                <div key={sp.key} className="item-row">
+                  <div className="flex flex-wrap items-center gap-2 px-3 py-1.5 text-sm">
+                    <button
+                      className="flex flex-1 items-center gap-2 text-left"
+                      onClick={() => setExpanded((e) => ({ ...e, [`bonus-${sp.key}`]: !e[`bonus-${sp.key}`] }))}
+                    >
+                      <span className="item-expand-btn">{isOpen ? '▾' : '▸'}</span>
+                      <span className="font-medium">{sp.name}</span>
+                    </button>
+                    <span className="pill">{sp.level === 0 ? 'Cantrip' : `Lv ${sp.level}`}</span>
+                    <span className="pill">{sp.school}</span>
+                  </div>
+                  {isOpen && (
+                    <div className="border-t border-stone-200 px-3 py-3 text-sm dark:border-stone-800">
+                      <p className="mb-2 text-xs text-stone-500">
+                        {sp.castingTime} • {sp.range} • {sp.components} • {sp.duration}
+                      </p>
+                      <p className="text-stone-600 dark:text-stone-300">{sp.description || 'No description available.'}</p>
+                      {sourceCitation(sp.source) && <p className="mt-2 text-xs italic text-stone-400">{sourceCitation(sp.source)}</p>}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
       )}

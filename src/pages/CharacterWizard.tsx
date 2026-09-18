@@ -18,7 +18,7 @@ import { getFinalAbilityScores, abilityModifier, formatModifier, getSpellcasting
 import { itemDescription } from '../lib/itemSummary';
 import { sourceCitation } from '../lib/sourceCitation';
 import { isProficientWithItem, getMaxAvailableSpellLevel, getSpellCounts } from '../lib/eligibility';
-import { fightingStyles, fightingStylesByKey } from '../data/srd/fightingStyles';
+import { availableFightingStyles, fightingStylesByKey } from '../data/srd/fightingStyles';
 
 const STEPS = ['Basics', 'Race', 'Class', 'Abilities', 'Skills', 'Equipment', 'Spells', 'Review'] as const;
 
@@ -72,11 +72,17 @@ export default function CharacterWizard() {
   async function persist(andNavigate?: string) {
     if (!character) return;
     let toSave = character;
-    // Only worth computing once a real class is chosen — otherwise getHitPointsMax's
-    // "never return less than 1" floor would prematurely lock hpCurrent in at 1
-    // (satisfying the `<= 0` check below) before the player has picked a class at all.
+    // Auto-fill current HP to max the first time a real class is chosen.
+    // Previously gated on `isNewDraft`, a flag that's only true for the
+    // render session that actually created the draft — so it went stale
+    // (and this silently stopped firing) the moment a resumed/reloaded edit
+    // session picked up the same still-blank draft, leaving hpCurrent at 0
+    // forever. hasRealClass alone is the right guard here: this only runs
+    // from the creation/edit wizard (not the character sheet, where HP is
+    // adjusted deliberately via Damage/Heal), so an existing character
+    // genuinely at 0 HP won't get silently healed just by other edits here.
     const hasRealClass = character.classes.some((c) => c.classKey);
-    if (isNewDraft && hasRealClass && character.hpCurrent <= 0) {
+    if (hasRealClass && character.hpCurrent <= 0) {
       const max = getHitPointsMax(character, compendium);
       if (max > 0) {
         toSave = { ...character, hpCurrent: max };
@@ -490,22 +496,29 @@ function ClassStep({
         </div>
       )}
 
-      {character.classes.some((cl) => compendium.classes[cl.classKey]?.features.some((f) => f.name.includes('Fighting Style') && f.level <= cl.level)) && (
-        <div className="mb-4">
-          <label className="label">Fighting Style</label>
-          <select className="input" value={character.fightingStyle ?? ''} onChange={(e) => update({ fightingStyle: e.target.value || undefined })}>
-            <option value="">Choose…</option>
-            {fightingStyles.map((fs) => (
-              <option key={fs.key} value={fs.key}>
-                {fs.name}
-              </option>
-            ))}
-          </select>
-          {character.fightingStyle && (
-            <p className="mt-1 text-xs text-stone-500">{fightingStylesByKey[character.fightingStyle]?.description}</p>
-          )}
-        </div>
-      )}
+      {(() => {
+        const fsClassKeys = character.classes
+          .filter((cl) => compendium.classes[cl.classKey]?.features.some((f) => f.name.includes('Fighting Style') && f.level <= cl.level))
+          .map((cl) => cl.classKey);
+        if (fsClassKeys.length === 0) return null;
+        const options = Array.from(new Map(fsClassKeys.flatMap((k) => availableFightingStyles(k)).map((fs) => [fs.key, fs])).values());
+        return (
+          <div className="mb-4">
+            <label className="label">Fighting Style</label>
+            <select className="input" value={character.fightingStyle ?? ''} onChange={(e) => update({ fightingStyle: e.target.value || undefined })}>
+              <option value="">Choose…</option>
+              {options.map((fs) => (
+                <option key={fs.key} value={fs.key}>
+                  {fs.name}
+                </option>
+              ))}
+            </select>
+            {character.fightingStyle && (
+              <p className="mt-1 text-xs text-stone-500">{fightingStylesByKey[character.fightingStyle]?.description}</p>
+            )}
+          </div>
+        );
+      })()}
 
       {character.classes.slice(1).map((cl, i) => (
         <div key={i} className="mb-2 grid grid-cols-1 gap-2 sm:grid-cols-4">

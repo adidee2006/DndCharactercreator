@@ -22,6 +22,7 @@ import {
   isRangedWeapon,
   getFightingStyleAttackBonus,
   getFightingStyleDamageBonus,
+  getExhaustionPenalty,
 } from './calc';
 
 const PAGE_W = 612;
@@ -302,7 +303,7 @@ export async function generateCharacterSheetPdf(character: Character, compendium
       const ranged = isRangedWeapon(w);
       const hasFinesse = w.weaponProperties?.some((p) => p.startsWith('Finesse'));
       const abilityMod = ranged ? mods.dex : hasFinesse ? Math.max(mods.str, mods.dex) : mods.str;
-      const attackBonus = abilityMod + prof + getFightingStyleAttackBonus(character, w);
+      const attackBonus = abilityMod + prof + getFightingStyleAttackBonus(character, w) + getExhaustionPenalty(character);
       const damageBonus = abilityMod + getFightingStyleDamageBonus(character, w);
       const damageText = w.damage ? `${w.damage}${damageBonus !== 0 ? formatModifier(damageBonus) : ''} ${w.damageType ?? ''}`.trim() : '';
       text(ctx, w.name, MARGIN + 4, y, { size: 8 });

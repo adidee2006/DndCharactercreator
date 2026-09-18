@@ -19,6 +19,18 @@ export function getProficiencyBonus(character: Character): number {
   return proficiencyBonusForLevel(getTotalLevel(character));
 }
 
+/** 2024 rules: each level of exhaustion gives a flat -2 penalty to ability checks, attack rolls, and saving throws. */
+export function getExhaustionPenalty(character: Character): number {
+  return -2 * Math.max(0, Math.min(6, character.exhaustion));
+}
+
+/** Conditions that override speed to 0 outright, regardless of the character's base speed. */
+const SPEED_ZERO_CONDITIONS = ['grappled', 'restrained', 'paralyzed', 'petrified', 'stunned', 'unconscious'];
+
+export function hasCondition(character: Character, name: string): boolean {
+  return character.conditions.some((c) => c.trim().toLowerCase() === name);
+}
+
 /** Final ability scores: base scores + racial bonuses + manual/feat bonuses. */
 export function getFinalAbilityScores(character: Character, compendium: Compendium): AbilityScores {
   const scores: AbilityScores = { ...character.baseAbilityScores };
@@ -62,7 +74,7 @@ export function getSavingThrowModifier(
 ): number {
   const mods = getAbilityModifiers(character, compendium);
   const proficient = character.savingThrowProficiencies.includes(ability);
-  return mods[ability] + (proficient ? getProficiencyBonus(character) : 0);
+  return mods[ability] + (proficient ? getProficiencyBonus(character) : 0) + getExhaustionPenalty(character);
 }
 
 export function getSkillModifier(character: Character, compendium: Compendium, skill: SkillKey): number {
@@ -72,7 +84,7 @@ export function getSkillModifier(character: Character, compendium: Compendium, s
   const isExpert = character.skillExpertise.includes(skill);
   const isProficient = character.skillProficiencies.includes(skill) || isExpert;
   const bonus = isExpert ? prof * 2 : isProficient ? prof : 0;
-  return mods[ability] + bonus;
+  return mods[ability] + bonus + getExhaustionPenalty(character);
 }
 
 export function getPassiveSkill(character: Character, compendium: Compendium, skill: SkillKey): number {
@@ -81,7 +93,7 @@ export function getPassiveSkill(character: Character, compendium: Compendium, sk
 
 export function getInitiative(character: Character, compendium: Compendium): number {
   const mods = getAbilityModifiers(character, compendium);
-  return mods.dex + character.initiativeBonus;
+  return mods.dex + character.initiativeBonus + getExhaustionPenalty(character);
 }
 
 function hasUnarmoredDefense(character: Character, compendium: Compendium): 'con' | 'wis' | null {
@@ -157,11 +169,17 @@ export function getFightingStyleDamageBonus(character: Character, item: Item): n
 }
 
 export function getSpeed(character: Character, compendium: Compendium): number {
-  if (character.speedOverride != null) return character.speedOverride;
-  const race = compendium.races[character.race.key];
-  if (!race) return 30;
-  const subrace = race.subraces?.find((sr) => sr.key === character.race.subraceKey);
-  return subrace?.speed ?? race.speed;
+  if (SPEED_ZERO_CONDITIONS.some((c) => hasCondition(character, c))) return 0;
+  const base =
+    character.speedOverride ??
+    (() => {
+      const race = compendium.races[character.race.key];
+      if (!race) return 30;
+      const subrace = race.subraces?.find((sr) => sr.key === character.race.subraceKey);
+      return subrace?.speed ?? race.speed;
+    })();
+  const exhaustionPenalty = 5 * Math.max(0, Math.min(6, character.exhaustion));
+  return Math.max(0, base - exhaustionPenalty);
 }
 
 export interface HitDiceEntry {
@@ -232,7 +250,7 @@ export function getSpellcastingClasses(character: Character, compendium: Compend
       classKey: cl.classKey,
       ability,
       saveDC: 8 + prof + mods[ability],
-      attackBonus: prof + mods[ability],
+      attackBonus: prof + mods[ability] + getExhaustionPenalty(character),
       isPactMagic: cls.spellcasting.progression === 'pact',
     });
   }

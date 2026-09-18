@@ -10,6 +10,7 @@ import {
   type SyncProgress,
   type CustomCompendiumInput,
 } from '../lib/compendium';
+import { parseCompendiumXml } from '../lib/xmlImport';
 import { downloadJson } from '../lib/jsonExport';
 import { useCompendiumVersion } from '../store/compendiumStore';
 import { useCompendium } from '../store/useCompendium';
@@ -104,8 +105,10 @@ export default function CompendiumManager() {
     e.target.value = '';
     if (!file) return;
     try {
-      const json = JSON.parse(await file.text()) as CustomCompendiumInput;
-      const result = await importCustomCompendium(json, { replace: replaceOnImport });
+      const text = await file.text();
+      const isXml = file.name.toLowerCase().endsWith('.xml') || /^\s*<\?xml|^\s*</.test(text);
+      const parsed = (isXml ? parseCompendiumXml(text) : JSON.parse(text)) as CustomCompendiumInput;
+      const result = await importCustomCompendium(parsed, { replace: replaceOnImport });
       bump();
       await refresh();
       const summary = Object.entries(result.counts)
@@ -194,16 +197,17 @@ export default function CompendiumManager() {
         <div className="card p-5">
           <h2 className="section-title">Custom / Homebrew Compendium</h2>
           <p className="mb-3 text-sm text-stone-500">
-            Import a JSON file with your own races, classes, backgrounds, feats, spells, or items. By default, an
-            entry reusing an existing key <em>merges</em> onto it (missing fields keep their old value) — safest for
-            a small homebrew tweak. Turn on full replace below when a file is a complete, corrected re-export that
-            should fully take over instead of patching around what was there.
+            Import a JSON or XML file with your own races, classes, backgrounds, feats, spells, or items (see the
+            expected shape for each format below). By default, an entry reusing an existing key <em>merges</em> onto
+            it (missing fields keep their old value) — safest for a small homebrew tweak. Turn on full replace below
+            when a file is a complete, corrected re-export that should fully take over instead of patching around
+            what was there.
           </p>
           <label className="mb-3 flex items-center gap-2 text-sm">
             <input type="checkbox" checked={replaceOnImport} onChange={(e) => setReplaceOnImport(e.target.checked)} />
             Fully replace matching entries instead of merging
           </label>
-          <input ref={fileInputRef} type="file" accept="application/json" className="hidden" onChange={handleImportFile} />
+          <input ref={fileInputRef} type="file" accept="application/json,.json,.xml,text/xml,application/xml" className="hidden" onChange={handleImportFile} />
           <button className="btn-primary" onClick={() => fileInputRef.current?.click()}>
             Import Custom Compendium
           </button>
@@ -234,6 +238,29 @@ export default function CompendiumManager() {
   "spells": { "my-spell-key": { "name": "...", "level": 2, ... } },
   "races": { ... }, "classes": { ... }, "backgrounds": { ... }, "feats": { ... }
 }`}</pre>
+          </details>
+          <details className="mt-2 text-xs text-stone-500">
+            <summary className="cursor-pointer font-medium">Expected XML shape</summary>
+            <pre className="mt-2 overflow-x-auto rounded bg-stone-100 p-2 dark:bg-stone-800">{`<compendium label="My Homebrew Pack">
+  <items>
+    <item key="flametongue-dagger">
+      <name>Flametongue Dagger</name>
+      <type>weapon</type>
+      <damage>1d4</damage>
+      <damageType>fire</damageType>
+      <rarity>Rare</rarity>
+    </item>
+  </items>
+  <spells>
+    <spell key="my-spell-key">
+      <name>...</name>
+      <level>2</level>
+      <classes><item>wizard</item><item>sorcerer</item></classes>
+    </spell>
+  </spells>
+  <!-- races, classes, backgrounds, feats follow the same pattern -->
+</compendium>`}</pre>
+            <p className="mt-1">A field with nested {'<item>'} children becomes a list; a plain text field stays text.</p>
           </details>
         </div>
       </div>

@@ -133,6 +133,8 @@ export interface Subclass {
   key: string;
   name: string;
   features: ClassFeature[];
+  /** Spells automatically prepared/known at the given level (e.g. a Paladin Oath's oath spells, a Cleric Domain's domain spells) — free, and not counted against the character's normal known/prepared limits. */
+  bonusSpells?: { level: number; spellKeys: string[] }[];
 }
 
 export interface DndClass {

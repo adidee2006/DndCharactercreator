@@ -7,7 +7,7 @@ import { ABILITY_KEYS, ABILITY_NAMES } from '../types/compendium';
 import type { AbilityKey } from '../types/compendium';
 import { getAbilityModifiers, getHitPointsMax, formatModifier } from '../lib/calc';
 import { asiLevelsForClass } from '../data/tables';
-import { fightingStyles, fightingStylesByKey } from '../data/srd/fightingStyles';
+import { availableFightingStyles, fightingStylesByKey } from '../data/srd/fightingStyles';
 import { getSpellCounts } from '../lib/eligibility';
 
 type AsiMode = 'none' | 'two-one' | 'one-two' | 'feat';
@@ -211,7 +211,7 @@ export default function LevelUp() {
             <h3 className="section-title">Fighting Style</h3>
             <select className="input" value={fightingStyleChoice} onChange={(e) => setFightingStyleChoice(e.target.value)}>
               <option value="">Choose…</option>
-              {fightingStyles.map((fs) => (
+              {availableFightingStyles(current.classKey).map((fs) => (
                 <option key={fs.key} value={fs.key}>
                   {fs.name}
                 </option>
