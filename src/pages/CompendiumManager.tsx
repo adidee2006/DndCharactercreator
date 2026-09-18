@@ -107,7 +107,15 @@ export default function CompendiumManager() {
     try {
       const text = await file.text();
       const isXml = file.name.toLowerCase().endsWith('.xml') || /^\s*<\?xml|^\s*</.test(text);
-      const parsed = (isXml ? parseCompendiumXml(text) : JSON.parse(text)) as CustomCompendiumInput;
+      let parsed: CustomCompendiumInput;
+      let preWarnings: string[] = [];
+      if (isXml) {
+        const xml = parseCompendiumXml(text);
+        parsed = xml.data as CustomCompendiumInput;
+        preWarnings = xml.warnings;
+      } else {
+        parsed = JSON.parse(text);
+      }
       const result = await importCustomCompendium(parsed, { replace: replaceOnImport });
       bump();
       await refresh();
@@ -115,8 +123,9 @@ export default function CompendiumManager() {
         .filter(([, n]) => n > 0)
         .map(([k, n]) => `${n} ${k}`)
         .join(', ');
+      const warnings = [...preWarnings, ...result.warnings];
       setImportResult(
-        `${replaceOnImport ? 'Replaced' : 'Imported'}: ${summary || 'nothing found'}.${result.warnings.length ? ` Warnings: ${result.warnings.join(' ')}` : ''}`,
+        `${replaceOnImport ? 'Replaced' : 'Imported'}: ${summary || 'nothing found'}.${warnings.length ? ` Warnings: ${warnings.join(' ')}` : ''}`,
       );
     } catch (err) {
       alert(`Couldn’t import that file: ${(err as Error).message}`);

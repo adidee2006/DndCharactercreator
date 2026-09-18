@@ -129,12 +129,36 @@ export interface Spellcasting {
   preparedCasterAbilityMod?: boolean;
 }
 
+/**
+ * A limited-use class/subclass resource that recovers on a rest — Channel
+ * Divinity, Lay on Hands, Rage, Bardic Inspiration, Ki/Focus Points, Sorcery
+ * Points, Wild Shape, Second Wind, Action Surge, Indomitable, Superiority
+ * Dice, Psionic Energy Dice, Arcane Recovery, and anything else with the
+ * same "N uses, recovers on a rest" shape.
+ */
+export interface ClassResource {
+  key: string;
+  name: string;
+  /**
+   * 'long': only a long rest restores it. 'short': a short OR long rest
+   * fully restores it. 'short-partial': a short rest restores exactly one
+   * use, a long rest restores all (Channel Divinity's actual rule).
+   */
+  reset: 'long' | 'short' | 'short-partial';
+  /** Max uses (or pool amount, e.g. Lay on Hands' HP pool) at each class level 1-20 (index 0 = level 1). 0 = not yet available at that level. */
+  max: number[];
+  /** True for a point/HP pool (Lay on Hands, Sorcery Points, Focus Points) rather than discrete "uses" — cosmetic label only. */
+  pool?: boolean;
+}
+
 export interface Subclass {
   key: string;
   name: string;
   features: ClassFeature[];
   /** Spells automatically prepared/known at the given level (e.g. a Paladin Oath's oath spells, a Cleric Domain's domain spells) — free, and not counted against the character's normal known/prepared limits. */
   bonusSpells?: { level: number; spellKeys: string[] }[];
+  /** Limited-use resources this subclass grants (e.g. Battle Master's Superiority Dice, Psi Warrior's Psionic Energy Dice). */
+  resources?: ClassResource[];
 }
 
 export interface DndClass {
@@ -153,6 +177,8 @@ export interface DndClass {
   subclassLevel: number;
   subclasses: Subclass[];
   spellcasting?: Spellcasting;
+  /** Limited-use resources this class grants (Rage, Channel Divinity, Lay on Hands, Bardic Inspiration, etc.). */
+  resources?: ClassResource[];
 }
 
 export interface Background {

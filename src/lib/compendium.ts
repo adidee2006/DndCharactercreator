@@ -11,6 +11,7 @@ import type {
   ItemType,
   SpellSchool,
   ClassFeature,
+  ClassResource,
   Subclass,
   Subrace,
   Trait,
@@ -131,7 +132,16 @@ export interface SyncProgress {
   errors: string[];
 }
 
-const DND5E_API = 'https://www.dnd5eapi.co/api';
+// dnd5eapi.co versioned its API by SRD release year; the old unversioned
+// /api/* paths now 301-redirect to /api/2014/*, and every list entry's own
+// `url` field already carries that full "/api/2014/..." path (not a path
+// relative to a "/api" base). Detail fetches must resolve against the bare
+// origin, not DND5E_API — prepending DND5E_API (which itself ends in
+// "/api/2014") in front of an entry.url that already starts with "/api/2014"
+// used to double up into a 404 for every single spell/item, which is why a
+// full sync could previously "succeed" at listing but save nothing at all.
+const DND5E_API_ORIGIN = 'https://www.dnd5eapi.co';
+const DND5E_API = `${DND5E_API_ORIGIN}/api/2014`;
 
 interface D5eApiIndexEntry {
   index: string;
@@ -206,7 +216,7 @@ export async function syncCompendiumFromInternet(
     let fetched = 0;
     const spellResults = await mapWithConcurrency(list.results, CONCURRENCY, async (entry) => {
       try {
-        const detail = await fetchJson<any>(`${DND5E_API}${entry.url}`);
+        const detail = await fetchJson<any>(`${DND5E_API_ORIGIN}${entry.url}`);
         const spell: Spell = {
           key: detail.index,
           name: detail.name,
@@ -253,7 +263,7 @@ export async function syncCompendiumFromInternet(
     let fetched = 0;
     const itemResults = await mapWithConcurrency(list.results, CONCURRENCY, async (entry) => {
       try {
-        const detail = await fetchJson<any>(`${DND5E_API}${entry.url}`);
+        const detail = await fetchJson<any>(`${DND5E_API_ORIGIN}${entry.url}`);
         const category: string = detail.equipment_category?.name ?? 'Adventuring Gear';
         const isWeapon = category === 'Weapon';
         const isArmor = category === 'Armor';
@@ -422,6 +432,26 @@ function sanitizeFeatures(value: unknown): ClassFeature[] {
     }));
 }
 
+const RESOURCE_RESETS = ['long', 'short', 'short-partial'] as const;
+
+function sanitizeResources(value: unknown): ClassResource[] {
+  const arr = toArray<unknown>(value) ?? [];
+  return arr
+    .filter((r): r is Record<string, unknown> => !!r && typeof r === 'object')
+    .map((r) => {
+      const reset = RESOURCE_RESETS.find((v) => v === r.reset) ?? 'long';
+      const maxIn = toArray<unknown>(r.max) ?? [];
+      const max = Array.from({ length: 20 }, (_, i) => Number(maxIn[i]) || 0);
+      return {
+        key: String(r.key ?? slugify(String(r.name ?? 'resource'))),
+        name: String(r.name ?? 'Resource'),
+        reset,
+        max,
+        pool: !!r.pool,
+      };
+    });
+}
+
 function sanitizeSubclasses(value: unknown, warnKey: (name: string) => string): Subclass[] {
   const arr = toArray<unknown>(value) ?? [];
   return arr
@@ -430,6 +460,7 @@ function sanitizeSubclasses(value: unknown, warnKey: (name: string) => string): 
       key: String(s.key ?? warnKey(String(s.name ?? 'subclass'))),
       name: String(s.name ?? 'Subclass'),
       features: sanitizeFeatures(s.features),
+      resources: s.resources != null ? sanitizeResources(s.resources) : undefined,
     }));
 }
 
@@ -522,6 +553,7 @@ function sanitizeClass(c: DndClass): DndClass {
     startingEquipment: asStringArray(c.startingEquipment),
     features: sanitizeFeatures(c.features),
     subclasses: sanitizeSubclasses(c.subclasses, (name) => slugify(name)),
+    resources: (c as unknown as Record<string, unknown>).resources != null ? sanitizeResources((c as unknown as Record<string, unknown>).resources) : undefined,
     subclassLevel: Number(c.subclassLevel) || 3,
     skillChoices:
       c.skillChoices && typeof c.skillChoices === 'object'

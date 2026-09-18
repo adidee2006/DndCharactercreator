@@ -24,6 +24,7 @@ import {
   formatModifier,
   getExhaustionPenalty,
   getWeaponAttacks,
+  getClassResources,
 } from '../lib/calc';
 import { knownConditionEffect } from '../data/conditions';
 import { generateCharacterSheetPdf } from '../lib/pdfExport';
@@ -284,10 +285,16 @@ function CombatTab({
     const primaryDie = hitDice[0]?.die ?? 8;
     const perDie = Math.max(0, Math.ceil((primaryDie + 1) / 2) + mods.con);
     const healed = perDie * spend;
+    const resourcesUsed = { ...(character.resourcesUsed ?? {}) };
+    for (const res of getClassResources(character, compendium)) {
+      if (res.reset === 'short') resourcesUsed[res.key] = 0;
+      else if (res.reset === 'short-partial') resourcesUsed[res.key] = Math.max(0, (resourcesUsed[res.key] ?? 0) - 1);
+    }
     update({
       hitDiceUsed: character.hitDiceUsed + spend,
       hpCurrent: Math.min(hpMax, character.hpCurrent + healed),
       pactSlotsUsed: 0,
+      resourcesUsed,
     });
   }
 
@@ -301,6 +308,7 @@ function CombatTab({
       hitDiceUsed: Math.max(0, character.hitDiceUsed - recoveredDice),
       exhaustion: Math.max(0, character.exhaustion - 1),
       deathSaves: { successes: 0, failures: 0 },
+      resourcesUsed: {},
     });
   }
 
@@ -321,9 +329,52 @@ function CombatTab({
   }
 
   const weaponAttacks = getWeaponAttacks(character, compendium);
+  const classResources = getClassResources(character, compendium);
+
+  function setResourceUsed(key: string, used: number, max: number) {
+    update({ resourcesUsed: { ...(character.resourcesUsed ?? {}), [key]: Math.min(max, Math.max(0, used)) } });
+  }
 
   return (
     <div className="space-y-6">
+      {classResources.length > 0 && (
+        <div>
+          <h3 className="section-title">Resources</h3>
+          <p className="mb-2 text-xs text-stone-500">
+            Channel Divinity, Rage, Lay on Hands, and other limited-use class features — spend/restore uses here, or let
+            Short/Long Rest reset them automatically.
+          </p>
+          <div className="flex flex-wrap gap-3">
+            {classResources.map((res) => (
+              <div key={`${res.classKey}-${res.key}`} className="stat-box px-3">
+                <span className="text-xs uppercase text-stone-500">{res.name}</span>
+                <div className="flex items-center gap-1">
+                  <button
+                    className="stepper-btn"
+                    title="Spend a use"
+                    disabled={res.used >= res.max}
+                    onClick={() => setResourceUsed(res.key, res.used + 1, res.max)}
+                  >
+                    −
+                  </button>
+                  <span className="w-12 text-center tabular-nums">
+                    {res.max - res.used}/{res.max}
+                  </span>
+                  <button
+                    className="stepper-btn"
+                    title="Restore a use"
+                    disabled={res.used <= 0}
+                    onClick={() => setResourceUsed(res.key, res.used - 1, res.max)}
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {weaponAttacks.length > 0 && (
         <div>
           <h3 className="section-title">Attacks</h3>

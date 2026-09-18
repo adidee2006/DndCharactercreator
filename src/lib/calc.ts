@@ -260,6 +260,47 @@ export function getCarryingCapacity(character: Character, compendium: Compendium
 }
 
 // --------------------------------------------------------------------------
+// Class/subclass resources (Channel Divinity, Lay on Hands, Rage, Bardic
+// Inspiration, Ki/Focus Points, Sorcery Points, Wild Shape, Second Wind,
+// Action Surge, Indomitable, Superiority Dice, Psionic Energy Dice,
+// Arcane Recovery, and anything else with the same "N uses, recovers on a
+// rest" shape).
+// --------------------------------------------------------------------------
+
+export interface ActiveClassResource {
+  key: string;
+  name: string;
+  classKey: string;
+  reset: 'long' | 'short' | 'short-partial';
+  max: number;
+  used: number;
+  pool?: boolean;
+}
+
+/** Every class/subclass resource the character currently has access to, with its level-scaled max and current used count. */
+export function getClassResources(character: Character, compendium: Compendium): ActiveClassResource[] {
+  const used = character.resourcesUsed ?? {};
+  const result: ActiveClassResource[] = [];
+  for (const cl of character.classes) {
+    const cls = compendium.classes[cl.classKey];
+    if (!cls || cl.level <= 0) continue;
+    const levelIndex = Math.min(20, cl.level) - 1;
+    for (const res of cls.resources ?? []) {
+      const max = res.max[levelIndex] ?? 0;
+      if (max <= 0) continue;
+      result.push({ key: res.key, name: res.name, classKey: cl.classKey, reset: res.reset, max, used: used[res.key] ?? 0, pool: res.pool });
+    }
+    const subclass = cl.subclassKey ? cls.subclasses.find((s) => s.key === cl.subclassKey) : undefined;
+    for (const res of subclass?.resources ?? []) {
+      const max = res.max[levelIndex] ?? 0;
+      if (max <= 0) continue;
+      result.push({ key: res.key, name: res.name, classKey: cl.classKey, reset: res.reset, max, used: used[res.key] ?? 0, pool: res.pool });
+    }
+  }
+  return result;
+}
+
+// --------------------------------------------------------------------------
 // Spellcasting
 // --------------------------------------------------------------------------
 

@@ -110,6 +110,8 @@ export interface Character {
   spellsPrepared: string[];
   spellSlotsUsed: SpellSlotUsage;
   pactSlotsUsed: number;
+  /** Uses spent so far for each class/subclass resource (keyed by ClassResource.key), e.g. Channel Divinity, Lay on Hands, Rage. */
+  resourcesUsed?: Record<string, number>;
 
   customFeatures: CustomFeature[];
 
@@ -160,6 +162,7 @@ export function createBlankCharacter(id: string): Character {
     spellsPrepared: [],
     spellSlotsUsed: {},
     pactSlotsUsed: 0,
+    resourcesUsed: {},
     customFeatures: [],
   };
 }

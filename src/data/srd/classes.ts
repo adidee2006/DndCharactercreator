@@ -1,4 +1,4 @@
-import type { DndClass, ClassFeature, SpellSlotTable } from '../../types/compendium';
+import type { DndClass, ClassFeature, ClassResource, SpellSlotTable } from '../../types/compendium';
 import { FULL_CASTER_SLOTS, HALF_CASTER_SLOTS, PACT_MAGIC } from '../tables';
 
 const SRD = { origin: 'srd' as const, label: "Player's Handbook (2024)", book: "Player's Handbook (2024)" };
@@ -27,6 +27,42 @@ function feat(level: number, name: string, description = ''): ClassFeature {
   return { level, name, description };
 }
 
+/**
+ * Builds a level-1..20 max-uses array from (startLevel, value) breakpoint
+ * pairs, e.g. levelTable(1, 2, 3, 3, 6, 4, 12, 5, 17, 6) means "2 uses at
+ * levels 1-2, 3 at 3-5, 4 at 6-11, 5 at 12-16, 6 at 17-20" (Barbarian Rage).
+ * Levels before the first breakpoint default to 0 (feature not gained yet).
+ */
+function levelTable(...pairs: number[]): number[] {
+  const table = new Array(20).fill(0);
+  for (let i = 0; i < pairs.length; i += 2) {
+    const startLevel = pairs[i];
+    const value = pairs[i + 1];
+    for (let lvl = startLevel; lvl <= 20; lvl++) table[lvl - 1] = value;
+  }
+  return table;
+}
+
+/** A resource whose max equals the character's class level itself from `startLevel` on (Focus Points, Sorcery Points). */
+function linearFromLevel(startLevel: number): number[] {
+  return Array.from({ length: 20 }, (_, i) => (i + 1 >= startLevel ? i + 1 : 0));
+}
+
+/** A resource whose max is `perLevel` × class level from `startLevel` on (Lay on Hands' 5-per-level pool). */
+function multipleOfLevel(startLevel: number, perLevel: number): number[] {
+  return Array.from({ length: 20 }, (_, i) => (i + 1 >= startLevel ? (i + 1) * perLevel : 0));
+}
+
+function resource(
+  key: string,
+  name: string,
+  reset: ClassResource['reset'],
+  max: number[],
+  pool?: boolean,
+): ClassResource {
+  return { key, name, reset, max, pool };
+}
+
 export const classes: Record<string, DndClass> = {
   barbarian: {
     key: 'barbarian',
@@ -41,6 +77,7 @@ export const classes: Record<string, DndClass> = {
     skillChoices: { count: 2, options: ['animalHandling', 'athletics', 'intimidation', 'nature', 'perception', 'survival'] },
     startingEquipment: ['greataxe', 'handaxe', 'handaxe', 'javelin', 'javelin', 'javelin', 'javelin', 'explorers-pack'],
     subclassLevel: 3,
+    resources: [resource('rage', 'Rage', 'long', levelTable(1, 2, 3, 3, 6, 4, 12, 5, 17, 6))],
     features: [
       feat(1, 'Rage', 'Bonus action to enter a rage: melee damage bonus, resistance to bludgeoning/piercing/slashing damage, advantage on Strength checks/saves.'),
       feat(1, 'Unarmored Defense', 'While not wearing armor, AC = 10 + Dex modifier + Con modifier.'),
@@ -124,6 +161,11 @@ export const classes: Record<string, DndClass> = {
     skillChoices: { count: 3, options: 'any' },
     startingEquipment: ['rapier', 'diplomats-pack', 'lute', 'leather'],
     subclassLevel: 3,
+    // Reset simplified to 'short' throughout: the real rule is long-rest-only
+    // until Font of Inspiration (level 5) adds short-rest recovery, but this
+    // model's reset field can't vary by level — short-rest recovery below
+    // level 5 is a minor, intentionally generous simplification.
+    resources: [resource('bardic-inspiration', 'Bardic Inspiration', 'short', levelTable(1, 2, 5, 3, 9, 4, 13, 5, 17, 6))],
     features: [
       feat(1, 'Bardic Inspiration', 'Bonus action to give a creature a d6 (scales with level) they can add to one ability check, attack roll, or saving throw.'),
       feat(1, 'Spellcasting', 'You can cast bard spells using Charisma.'),
@@ -201,10 +243,11 @@ export const classes: Record<string, DndClass> = {
     skillChoices: { count: 2, options: ['history', 'insight', 'medicine', 'persuasion', 'religion'] },
     startingEquipment: ['mace', 'scalemail', 'light-crossbow', 'priests-pack', 'shield', 'holy-symbol'],
     subclassLevel: 3,
+    resources: [resource('channel-divinity', 'Channel Divinity', 'short-partial', levelTable(2, 2, 6, 3, 18, 4))],
     features: [
       feat(1, 'Spellcasting', 'You can cast cleric spells using Wisdom.'),
       feat(1, 'Divine Order', 'Choose a specialty: Protector (proficiency with martial weapons and heavy armor) or Thaumaturge (an extra cantrip, and add your Wisdom modifier to Arcana/Religion checks).'),
-      feat(2, 'Channel Divinity', 'Channel divine energy to fuel Turn Undead and Divine Spark (point your holy symbol at a creature within 30 feet to heal it, or force a Constitution save to deal necrotic/radiant damage). Usable twice per long rest, regaining one use on a short rest; the damage/healing die (1d8) increases at levels 7, 13, and 18.'),
+      feat(2, 'Channel Divinity', 'Channel divine energy to fuel Turn Undead and Divine Spark (point your holy symbol at a creature within 30 feet to heal it, or force a Constitution save to deal necrotic/radiant damage). 2 uses starting at level 2 (3 at level 6, 4 at level 18); regain one use on a short rest, all uses on a long rest. The damage/healing die (1d8) increases at levels 7, 13, and 18.'),
       feat(3, 'Divine Domain', 'Choose a domain subclass that grants features at 3rd, 6th, 8th, and 17th level, plus domain spells always prepared for you.'),
       feat(5, 'Sear Undead', 'When you use Turn Undead, any undead that fails its save and can see/hear you also takes radiant damage equal to your cleric level.'),
       feat(10, 'Divine Intervention', 'You can call on your deity to intervene on your behalf, once per long rest.'),
@@ -309,6 +352,10 @@ export const classes: Record<string, DndClass> = {
     skillChoices: { count: 2, options: ['arcana', 'animalHandling', 'insight', 'medicine', 'nature', 'perception', 'religion', 'survival'] },
     startingEquipment: ['leather', 'scimitar', 'druidic-focus', 'explorers-pack'],
     subclassLevel: 3,
+    // Level 20's "unlimited" Archdruid uses is represented as a large flat
+    // number (99) rather than a genuinely unbounded value, since max is a
+    // plain per-level count table.
+    resources: [resource('wild-shape', 'Wild Shape', 'short', levelTable(2, 2, 20, 99))],
     features: [
       feat(1, 'Druidic', 'You know Druidic, the secret language of druids.'),
       feat(1, 'Spellcasting', 'You can cast druid spells using Wisdom.'),
@@ -388,15 +435,20 @@ export const classes: Record<string, DndClass> = {
     skillChoices: { count: 2, options: ['acrobatics', 'animalHandling', 'athletics', 'history', 'insight', 'intimidation', 'perception', 'survival'] },
     startingEquipment: ['chainmail', 'longsword', 'shield', 'light-crossbow', 'dungeoneers-pack'],
     subclassLevel: 3,
+    resources: [
+      resource('second-wind', 'Second Wind', 'short-partial', levelTable(1, 2, 4, 3, 10, 4)),
+      resource('action-surge', 'Action Surge', 'short', levelTable(2, 1, 17, 2)),
+      resource('indomitable', 'Indomitable', 'long', levelTable(9, 1, 13, 2, 17, 3)),
+    ],
     features: [
       feat(1, 'Fighting Style', 'Adopt a particular style of fighting as your specialty (Archery, Defense, Dueling, etc).'),
-      feat(1, 'Second Wind', 'Bonus action to regain 1d10 + fighter level hit points, once per short/long rest (2 uses at level 5, 3 at level 9).'),
+      feat(1, 'Second Wind', 'Bonus action to regain 1d10 + fighter level hit points. 2 uses starting at level 1 (3 at level 4, 4 at level 10); regain one use on a short rest, all uses on a long rest.'),
       feat(1, 'Weapon Mastery', 'You can use the mastery property of three kinds of weapons you are proficient with; you can swap one of those choices whenever you finish a long rest.'),
-      feat(2, 'Action Surge', 'Take one additional action on your turn, once per short/long rest.'),
+      feat(2, 'Action Surge', 'Take one additional action on your turn, once per short/long rest (twice, but only once per turn, starting at level 17).'),
       feat(2, 'Tactical Mind', 'When you fail an ability check, you can expend a use of Second Wind (without regaining hit points) to add 1d10 to the check, potentially turning it into a success.'),
       feat(3, 'Martial Archetype', 'Choose a subclass that grants features at 3rd, 7th, 10th, 15th, and 18th level.'),
       feat(5, 'Extra Attack', 'You can attack twice, instead of once, whenever you take the Attack action.'),
-      feat(9, 'Indomitable', 'You can reroll a failed saving throw; once per long rest (more at higher levels).'),
+      feat(9, 'Indomitable', 'You can reroll a failed saving throw, adding a bonus equal to your fighter level; once per long rest (twice at level 13, three times at level 17).'),
       feat(11, 'Extra Attack (2)', 'You can attack three times whenever you take the Attack action.'),
       feat(20, 'Extra Attack (3)', 'You can attack four times whenever you take the Attack action.'),
     ],
@@ -415,8 +467,9 @@ export const classes: Record<string, DndClass> = {
       {
         key: 'battle-master',
         name: 'Battle Master',
+        resources: [resource('superiority-dice', 'Superiority Dice', 'long', levelTable(3, 4, 7, 5, 15, 6))],
         features: [
-          feat(3, 'Combat Superiority', 'Learn maneuvers fueled by superiority dice (d8s) — e.g. Trip Attack, Riposte, Precision Attack — to add extra effects and damage to your attacks.'),
+          feat(3, 'Combat Superiority', 'Learn maneuvers fueled by superiority dice (d8s) — e.g. Trip Attack, Riposte, Precision Attack — to add extra effects and damage to your attacks. 4 dice at level 3 (5 at level 7, 6 at level 15), regained on a long rest.'),
           feat(3, 'Student of War', 'Gain proficiency with one type of artisan’s tools.'),
           feat(7, 'Know Your Enemy', 'Study a creature for a minute to learn how it compares to you in several categories, such as whether it is stronger or weaker.'),
           feat(10, 'Improved Combat Superiority', 'Your superiority dice become d10s.'),
@@ -439,6 +492,7 @@ export const classes: Record<string, DndClass> = {
       {
         key: 'psi-warrior',
         name: 'Psi Warrior',
+        resources: [resource('psionic-energy-dice', 'Psionic Energy Dice', 'long', levelTable(3, 4, 5, 6, 9, 8, 13, 10, 17, 12))],
         features: [
           feat(
             3,
@@ -467,26 +521,32 @@ export const classes: Record<string, DndClass> = {
     skillChoices: { count: 2, options: ['acrobatics', 'athletics', 'history', 'insight', 'religion', 'stealth'] },
     startingEquipment: ['shortsword', 'dungeoneers-pack', '10 darts'],
     subclassLevel: 3,
+    // 2024 rules renamed Ki to "Focus Points" (same mechanic: fuels Flurry of
+    // Blows, Patient Defense, Step of the Wind, Stunning Strike, etc.), and
+    // changed its value from a fixed table to simply "equal to your monk
+    // level."
+    resources: [resource('focus-points', 'Focus Points', 'short', linearFromLevel(2), true)],
     features: [
       feat(1, 'Unarmored Defense', 'While not wearing armor or shield, AC = 10 + Dex modifier + Wis modifier.'),
       feat(1, 'Martial Arts', 'Use Dex for unarmed strikes/monk weapons; unarmed strike die scales with level; bonus action unarmed strike.'),
-      feat(2, 'Ki', 'You have ki points to fuel Flurry of Blows, Patient Defense, and Step of the Wind.'),
+      feat(2, 'Focus', 'You have Focus Points (equal to your monk level) to fuel Flurry of Blows, Patient Defense, and Step of the Wind. Regain all expended points on a short or long rest.'),
+      feat(2, 'Uncanny Metabolism', 'When you roll Initiative, you can regain all expended Focus Points, and roll your Martial Arts die to regain that many hit points plus your monk level. Usable once per long rest.'),
       feat(2, 'Unarmored Movement', 'Your speed increases while not wearing armor or a shield.'),
       feat(3, 'Monastic Tradition', 'Choose a subclass that grants features at 3rd, 6th, 11th, and 17th level.'),
       feat(3, 'Deflect Missiles', 'Use your reaction to deflect or catch a ranged weapon attack, reducing damage.'),
       feat(4, 'Slow Fall', 'Use your reaction to reduce falling damage.'),
       feat(5, 'Extra Attack', 'You can attack twice, instead of once, whenever you take the Attack action.'),
-      feat(5, 'Stunning Strike', 'When you hit with a melee weapon attack, spend 1 ki to attempt to stun the target.'),
+      feat(5, 'Stunning Strike', 'When you hit with a melee weapon attack, spend 1 Focus Point to attempt to stun the target.'),
       feat(6, 'Ki-Empowered Strikes', 'Your unarmed strikes count as magical for overcoming resistance/immunity.'),
       feat(7, 'Evasion', 'On a Dex save for half damage, take no damage on success and half on failure.'),
       feat(7, 'Stillness of Mind', 'Use your action to end one effect on yourself causing you to be charmed or frightened.'),
       feat(9, 'Unarmored Movement Improvement', 'You can move along vertical surfaces and across liquids without falling.'),
       feat(10, 'Purity of Body', 'You are immune to disease and poison.'),
       feat(13, 'Tongue of the Sun and Moon', 'You understand all spoken languages, and any creature that understands a language understands you.'),
-      feat(14, 'Diamond Soul', 'You are proficient in all saving throws; spend 1 ki to reroll a failed save.'),
+      feat(14, 'Diamond Soul', 'You are proficient in all saving throws; spend 1 Focus Point to reroll a failed save.'),
       feat(15, 'Timeless Body', 'You no longer suffer penalties from aging and don’t need food or water.'),
-      feat(18, 'Empty Body', 'Spend 4 ki to become invisible for 1 minute; spend 8 ki to cast astral projection.'),
-      feat(20, 'Perfect Self', 'When you roll initiative with no ki points, you regain 4 ki points.'),
+      feat(18, 'Empty Body', 'Spend 4 Focus Points to become invisible for 1 minute; spend 8 to cast astral projection.'),
+      feat(20, 'Perfect Self', 'When you roll initiative with no Focus Points left, you regain 4 Focus Points.'),
     ],
     subclasses: [
       {
@@ -547,6 +607,10 @@ export const classes: Record<string, DndClass> = {
     skillChoices: { count: 2, options: ['athletics', 'insight', 'intimidation', 'medicine', 'persuasion', 'religion'] },
     startingEquipment: ['chainmail', 'longsword', 'shield', 'priests-pack', '5 javelins'],
     subclassLevel: 3,
+    resources: [
+      resource('lay-on-hands', 'Lay on Hands', 'long', multipleOfLevel(1, 5), true),
+      resource('channel-divinity', 'Channel Divinity', 'short-partial', levelTable(3, 2, 11, 3)),
+    ],
     features: [
       feat(1, 'Divine Sense', 'As a bonus action, open your awareness to detect celestials, fiends, and undead within 60 feet for 10 minutes (or until incapacitated); you also detect consecrated/desecrated places and objects in that radius. Usable 1 + Cha modifier times per long rest.'),
       feat(1, 'Lay on Hands', 'A pool of healing power equal to 5 × paladin level. As a bonus action, touch a creature (including yourself) to restore hit points from the pool, or spend 5 points from it to cure one disease or neutralize one poison affecting it.'),
@@ -555,7 +619,7 @@ export const classes: Record<string, DndClass> = {
       feat(2, 'Fighting Style', 'Adopt a particular style of fighting as your specialty.'),
       feat(2, "Paladin's Smite", 'Divine Smite is now a spell that’s always prepared for you, and you can cast it once without expending a spell slot (regaining that free use on a long rest).'),
       feat(3, 'Divine Health', 'You are immune to disease.'),
-      feat(3, 'Channel Divinity', 'Channel divine energy to fuel magical effects granted by your Sacred Oath; regain uses on a short or long rest.'),
+      feat(3, 'Channel Divinity', 'Channel divine energy to fuel magical effects granted by your Sacred Oath. 2 uses starting at level 3 (3 at level 11); regain one use on a short rest, all uses on a long rest.'),
       feat(3, 'Sacred Oath', 'Choose a subclass that grants features at 3rd, 7th, 15th, and 20th level, plus oath spells always prepared for you.'),
       feat(5, 'Extra Attack', 'You can attack twice, instead of once, whenever you take the Attack action.'),
       feat(5, 'Faithful Steed', 'You can cast Find Steed without expending a spell slot, once per long rest (or by spending a spell slot).'),
@@ -818,10 +882,11 @@ export const classes: Record<string, DndClass> = {
     skillChoices: { count: 2, options: ['arcana', 'deception', 'insight', 'intimidation', 'persuasion', 'religion'] },
     startingEquipment: ['light-crossbow', 'component-pouch', 'dungeoneers-pack', 'dagger', 'dagger'],
     subclassLevel: 3,
+    resources: [resource('sorcery-points', 'Sorcery Points', 'long', linearFromLevel(2), true)],
     features: [
       feat(1, 'Spellcasting', 'You can cast sorcerer spells using Charisma.'),
       feat(1, 'Innate Sorcery', 'As a bonus action, you can surge with sorcery for 1 minute, gaining +1 to your spell save DC and advantage on spell attack rolls. Usable twice per long rest.'),
-      feat(2, 'Font of Magic', 'You gain sorcery points you can use to create spell slots or fuel metamagic.'),
+      feat(2, 'Font of Magic', 'You gain sorcery points (equal to your sorcerer level) you can use to create spell slots or fuel metamagic. Regain all expended points on a long rest.'),
       feat(3, 'Metamagic', 'Choose two metamagic options to modify your spells (Twinned, Quickened, Careful, etc).'),
       feat(3, 'Sorcerous Origin', 'Choose a subclass that grants features at 3rd, 6th, 14th, and 18th level.'),
       feat(10, 'Metamagic', 'Choose one additional metamagic option.'),
@@ -974,6 +1039,7 @@ export const classes: Record<string, DndClass> = {
     skillChoices: { count: 2, options: ['arcana', 'history', 'insight', 'investigation', 'medicine', 'religion'] },
     startingEquipment: ['quarterstaff', 'component-pouch', 'scholars-pack', 'spellbook'],
     subclassLevel: 3,
+    resources: [resource('arcane-recovery', 'Arcane Recovery', 'long', new Array(20).fill(1))],
     features: [
       feat(1, 'Spellcasting', 'You can cast wizard spells using Intelligence, prepared from your spellbook.'),
       feat(1, 'Ritual Adept', 'You can cast any spell in your spellbook that has the ritual tag as a ritual, even if you don’t have it prepared.'),
