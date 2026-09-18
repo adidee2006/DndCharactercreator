@@ -159,6 +159,14 @@ export interface Subclass {
   bonusSpells?: { level: number; spellKeys: string[] }[];
   /** Limited-use resources this subclass grants (e.g. Battle Master's Superiority Dice, Psi Warrior's Psionic Energy Dice). */
   resources?: ClassResource[];
+  /**
+   * Bonus skill proficiencies this subclass grants at a given level — either
+   * fixed named skills (no choice, e.g. Way of Mercy's Medicine + Insight)
+   * or a player's choice of N skills, optionally restricted to a subset
+   * (e.g. Fey Wanderer's "a Charisma skill"; College of Lore's 3 with no
+   * restriction).
+   */
+  bonusSkills?: { level: number; fixed?: SkillKey[]; choose?: number; chooseFrom?: SkillKey[] }[];
 }
 
 export interface DndClass {

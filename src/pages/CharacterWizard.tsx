@@ -19,6 +19,9 @@ import { itemDescription } from '../lib/itemSummary';
 import { sourceCitation } from '../lib/sourceCitation';
 import { isProficientWithItem, getMaxAvailableSpellLevel, getSpellCounts } from '../lib/eligibility';
 import { availableFightingStyles, fightingStylesByKey } from '../data/srd/fightingStyles';
+import { DND_LANGUAGES } from '../data/languages';
+import { MultiSelectChips } from '../components/MultiSelectChips';
+import { SearchableSelect } from '../components/SearchableSelect';
 
 const STEPS = ['Basics', 'Race', 'Class', 'Abilities', 'Skills', 'Equipment', 'Spells', 'Review'] as const;
 
@@ -449,6 +452,20 @@ function ClassStep({
     update({ classes: character.classes.filter((_, i) => i !== index) });
   }
 
+  function setSubclass(subclassKey: string) {
+    const next = character.classes.map((c, i) => (i === 0 ? { ...c, subclassKey: subclassKey || undefined } : c));
+    const sc = cls?.subclasses.find((s) => s.key === subclassKey);
+    const fixedSkills = (sc?.bonusSkills ?? [])
+      .filter((b) => b.level <= (primary?.level ?? 1))
+      .flatMap((b) => b.fixed ?? []);
+    update({
+      classes: next,
+      skillProficiencies: fixedSkills.length
+        ? Array.from(new Set([...character.skillProficiencies, ...fixedSkills]))
+        : character.skillProficiencies,
+    });
+  }
+
   return (
     <div>
       <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -484,7 +501,7 @@ function ClassStep({
           <select
             className="input"
             value={primary?.subclassKey ?? ''}
-            onChange={(e) => updateClassAt(0, { subclassKey: e.target.value || undefined })}
+            onChange={(e) => setSubclass(e.target.value)}
           >
             <option value="">Choose…</option>
             {cls.subclasses.map((sc) => (
@@ -723,20 +740,34 @@ function SkillsStep({
   update: (p: Partial<Character>) => void;
   compendium: ReturnType<typeof useCompendium>['compendium'];
 }) {
-  const cls = compendium.classes[character.classes[0]?.classKey];
+  const primary = character.classes[0];
+  const cls = compendium.classes[primary?.classKey];
+  const subclass = cls?.subclasses.find((s) => s.key === primary?.subclassKey);
+  const bonusSkillEntries = (subclass?.bonusSkills ?? []).filter((b) => b.level <= (primary?.level ?? 1));
+  const fixedSubclassSkills = bonusSkillEntries.flatMap((b) => b.fixed ?? []);
+  const subclassChooseCount = bonusSkillEntries.reduce((sum, b) => sum + (b.choose ?? 0), 0);
+  // If any "choose" entry omits chooseFrom, that grant allows any skill, so the option pool can't be restricted.
+  const subclassChooseUnrestricted = bonusSkillEntries.some((b) => b.choose && !b.chooseFrom);
+  const subclassChooseFrom = bonusSkillEntries.flatMap((b) => b.chooseFrom ?? []);
+
   const ALL_SKILLS: SkillKey[] = ['acrobatics', 'animalHandling', 'arcana', 'athletics', 'deception', 'history', 'insight', 'intimidation', 'investigation', 'medicine', 'nature', 'perception', 'performance', 'persuasion', 'religion', 'sleightOfHand', 'stealth', 'survival'];
-  const allSkillOptions: SkillKey[] = cls?.skillChoices.options === 'any' ? ALL_SKILLS : cls?.skillChoices.options ?? [];
+  const classAllowsAny = cls?.skillChoices.options === 'any';
+  const allSkillOptions: SkillKey[] =
+    classAllowsAny || subclassChooseUnrestricted
+      ? ALL_SKILLS
+      : Array.from(new Set([...(cls?.skillChoices.options as SkillKey[] | undefined) ?? [], ...subclassChooseFrom]));
 
   const backgroundSkills = compendium.backgrounds[character.background]?.skillProficiencies ?? [];
-  const chosenFromClass = character.skillProficiencies.filter((s) => !backgroundSkills.includes(s));
+  const lockedSkills = Array.from(new Set([...backgroundSkills, ...fixedSubclassSkills]));
+  const totalChooseCount = (cls?.skillChoices.count ?? 2) + subclassChooseCount;
+  const chosenFromClass = character.skillProficiencies.filter((s) => !lockedSkills.includes(s));
 
   function toggleSkill(skill: SkillKey) {
     const has = character.skillProficiencies.includes(skill);
     if (has) {
       update({ skillProficiencies: character.skillProficiencies.filter((s) => s !== skill) });
     } else {
-      const count = cls?.skillChoices.count ?? 2;
-      if (chosenFromClass.length >= count) return;
+      if (chosenFromClass.length >= totalChooseCount) return;
       update({ skillProficiencies: [...character.skillProficiencies, skill] });
     }
   }
@@ -744,32 +775,35 @@ function SkillsStep({
   return (
     <div>
       <p className="mb-3 text-sm text-stone-500">
-        Choose {cls?.skillChoices.count ?? 2} class skill{(cls?.skillChoices.count ?? 2) === 1 ? '' : 's'}. Background skills are
-        added automatically.
+        Choose {totalChooseCount} skill{totalChooseCount === 1 ? '' : 's'}
+        {subclassChooseCount > 0 ? ` (${cls?.skillChoices.count ?? 2} from your class, ${subclassChooseCount} from ${subclass?.name})` : ''}.
+        Background{fixedSubclassSkills.length > 0 ? ` and subclass` : ''} skills are added automatically.
       </p>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
         {allSkillOptions.map((skill) => {
+          const locked = lockedSkills.includes(skill);
           const fromBackground = backgroundSkills.includes(skill);
           const checked = character.skillProficiencies.includes(skill);
           return (
             <label
               key={skill}
-              className={`flex items-center gap-2 rounded-lg border px-2 py-1.5 text-sm ${fromBackground ? 'border-stone-200 bg-stone-100 text-stone-400 dark:border-stone-800 dark:bg-stone-800/40' : 'border-stone-300 dark:border-stone-700'}`}
+              className={`flex items-center gap-2 rounded-lg border px-2 py-1.5 text-sm ${locked ? 'border-stone-200 bg-stone-100 text-stone-400 dark:border-stone-800 dark:bg-stone-800/40' : 'border-stone-300 dark:border-stone-700'}`}
             >
-              <input type="checkbox" checked={checked} disabled={fromBackground} onChange={() => toggleSkill(skill)} />
+              <input type="checkbox" checked={checked} disabled={locked} onChange={() => toggleSkill(skill)} />
               {skill.replace(/([A-Z])/g, ' $1').replace(/^./, (c) => c.toUpperCase())}
-              {fromBackground && <span className="text-xs">(background)</span>}
+              {locked && <span className="text-xs">({fromBackground ? 'background' : subclass?.name})</span>}
             </label>
           );
         })}
       </div>
 
       <div className="mt-6">
-        <label className="label">Languages (comma separated)</label>
-        <input
-          className="input"
-          value={character.languages.join(', ')}
-          onChange={(e) => update({ languages: e.target.value.split(',').map((s) => s.trim()).filter(Boolean) })}
+        <label className="label">Languages</label>
+        <MultiSelectChips
+          options={DND_LANGUAGES}
+          values={character.languages}
+          onChange={(languages) => update({ languages })}
+          placeholder="Add languages…"
         />
       </div>
     </div>
@@ -835,17 +869,14 @@ function EquipmentStep({
             Show items I'm not proficient with
           </label>
         </div>
-        <select className="input" value="" onChange={(e) => addItem(e.target.value)}>
-          <option value="">Choose an item…</option>
-          {Object.values(compendium.items)
+        <SearchableSelect
+          placeholder="Search items…"
+          onSelect={addItem}
+          options={Object.values(compendium.items)
             .filter((item) => showAllItems || isProficientWithItem(character, compendium, item))
             .sort((a, b) => a.name.localeCompare(b.name))
-            .map((item) => (
-              <option key={item.key} value={item.key}>
-                {item.name} ({item.type})
-              </option>
-            ))}
-        </select>
+            .map((item) => ({ value: item.key, label: `${item.name} (${item.type})` }))}
+        />
         {!showAllItems && (
           <p className="mt-1 text-xs text-stone-400">
             Only showing equipment {character.name || 'this character'} is proficient with. Gear, tools, and consumables are always

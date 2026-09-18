@@ -183,6 +183,7 @@ export const classes: Record<string, DndClass> = {
       {
         key: 'lore',
         name: 'College of Lore',
+        bonusSkills: [{ level: 3, choose: 3 }],
         features: [
           feat(3, 'Bonus Proficiencies', 'Gain proficiency with three skills of your choice.'),
           feat(3, 'Cutting Words', 'Use your reaction and expend a Bardic Inspiration die to subtract it from an enemy’s attack roll, ability check, or damage roll.'),
@@ -572,6 +573,7 @@ export const classes: Record<string, DndClass> = {
       {
         key: 'mercy',
         name: 'Way of Mercy',
+        bonusSkills: [{ level: 3, fixed: ['medicine', 'insight'] }],
         features: [
           feat(3, 'Implements of Mercy', 'Gain proficiency with the Medicine and Insight skills (if not already proficient) and a healer’s kit.'),
           feat(3, 'Hand of Healing', 'Spend 1 ki as an action to touch a creature and restore hit points equal to your Martial Arts die + your Wisdom modifier.'),
@@ -765,6 +767,7 @@ export const classes: Record<string, DndClass> = {
       {
         key: 'fey-wanderer',
         name: 'Fey Wanderer',
+        bonusSkills: [{ level: 3, choose: 1, chooseFrom: ['deception', 'intimidation', 'performance', 'persuasion'] }],
         features: [
           feat(3, 'Dreadful Strikes', 'Once per turn, your weapon attacks deal an extra 1d4 psychic damage.'),
           feat(3, 'Otherworldly Glamour', 'Gain proficiency in a Charisma skill and add your Wisdom modifier to Charisma checks.'),

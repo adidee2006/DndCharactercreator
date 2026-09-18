@@ -5,10 +5,13 @@ const SYNC_STORAGE_KEY = 'dnd-cc-sync-code';
 const FETCH_TIMEOUT_MS = 15000;
 
 /*
- * Cross-device sync uses ExtendsClass's free, key-less JSON storage API
- * (api.extendsclass.com/json-storage) as an anonymous save slot. Creating a
- * bin returns its id, which becomes the reusable sync code; push/pull
- * read and write that same bin's JSON body directly.
+ * Cross-device sync uses ExtendsClass's free, key-less JSON storage API as
+ * an anonymous save slot. Creating a bin returns its id, which becomes the
+ * reusable sync code; push/pull read and write that same bin's JSON body
+ * directly. The real API host is json.extendsclass.com (NOT
+ * api.extendsclass.com, which a previous version of this code guessed
+ * wrong and which 404s on every single request — confirmed against a real,
+ * working integration of this exact service).
  *
  * This is the third backend this feature has used. jsonblob.com never
  * worked from a real browser (its POST response only carries the new id in
@@ -17,9 +20,9 @@ const FETCH_TIMEOUT_MS = 15000;
  * endpoint requires a POST body with an email address (an empty POST
  * 500s), and — more fundamentally — actually accepting writes to that
  * bucket requires the email to be verified, which has no answer for a
- * static page with no account system. ExtendsClass's bin storage
- * explicitly documents CORS support and needs no account or key to create,
- * read, or update a bin, which is why it was picked here.
+ * static page with no account system. ExtendsClass's bin storage needs no
+ * account or key to read or update a bin by id, which is why it was picked
+ * here.
  *
  * Every request that can fail surfaces the server's actual response body
  * in the thrown error (not just a status code) — if this API's contract
@@ -29,7 +32,7 @@ const FETCH_TIMEOUT_MS = 15000;
  * dependency-free fallback either way.
  */
 
-const API_BASE = 'https://api.extendsclass.com/json-storage/bin';
+const API_BASE = 'https://json.extendsclass.com/bin';
 
 export interface SyncPayload {
   format: 'dnd-character-creator/sync';
@@ -102,6 +105,11 @@ function extractBinId(body: unknown): string | null {
   return null;
 }
 
+/** A short, URL-safe random id — used as a client-generated bin id if the service's own POST-to-create endpoint doesn't cooperate. */
+function randomId(): string {
+  return Math.random().toString(36).slice(2, 10) + Math.random().toString(36).slice(2, 6);
+}
+
 /** Creates a new bin on the sync service and returns its id as the shareable, reusable sync code. */
 export async function createSyncCode(): Promise<string> {
   const payload = await buildPayload();
@@ -110,19 +118,30 @@ export async function createSyncCode(): Promise<string> {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
-  if (!res.ok) throw await errorFromResponse(res, 'while setting up your code');
-  let body: unknown = null;
-  try {
-    body = await res.json();
-  } catch {
-    // some deployments might return the id as plain text instead of JSON
+  if (res.ok) {
+    let body: unknown = null;
+    try {
+      body = await res.json();
+    } catch {
+      // some deployments might return the id as plain text instead of JSON
+    }
+    const id = extractBinId(body) ?? extractBinId(await res.text().catch(() => null));
+    if (id) {
+      setStoredSyncCode(id);
+      return id;
+    }
   }
-  const id = extractBinId(body) ?? extractBinId(await res.text().catch(() => null));
-  if (!id) {
-    throw new Error(
-      "The sync service didn't return a usable code. It may have changed its API — please use Export/Import JSON instead for now.",
-    );
-  }
+  // POST-to-create didn't give us an id (wrong response shape, or this
+  // endpoint needs an account this app doesn't have). Fall back to writing
+  // directly to a client-generated id — PUT to a bin id creates it if it
+  // doesn't exist yet, same as every push after this one.
+  const id = randomId();
+  const putRes = await fetchWithTimeout(`${API_BASE}/${encodeURIComponent(id)}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!putRes.ok) throw await errorFromResponse(putRes, 'while setting up your code');
   setStoredSyncCode(id);
   return id;
 }

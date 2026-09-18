@@ -26,7 +26,7 @@ import {
   getWeaponAttacks,
   getClassResources,
 } from '../lib/calc';
-import { knownConditionEffect } from '../data/conditions';
+import { knownConditionEffect, CONDITION_NAMES } from '../data/conditions';
 import { generateCharacterSheetPdf } from '../lib/pdfExport';
 import { characterToExportFile, downloadJson, slugFilename } from '../lib/jsonExport';
 import { totalValueInGp, autoExchange, formatGp } from '../lib/currency';
@@ -34,9 +34,32 @@ import { itemDescription } from '../lib/itemSummary';
 import { sourceCitation } from '../lib/sourceCitation';
 import { isProficientWithItem, isEligibleForFeat, getMaxAvailableSpellLevel, getSpellCounts, getSubclassBonusSpells } from '../lib/eligibility';
 import { availableFightingStyles, fightingStylesByKey } from '../data/srd/fightingStyles';
+import { SearchableSelect } from '../components/SearchableSelect';
+import { MultiSelectChips } from '../components/MultiSelectChips';
 import { v4 as uuid } from 'uuid';
 
 const TABS = ['Main', 'Combat', 'Spells', 'Inventory', 'Features', 'Bio'] as const;
+
+/** A visual HP bar (green → amber → red as HP drops), with a temp-HP badge alongside it. */
+function HealthBar({ current, max, temp }: { current: number; max: number; temp: number }) {
+  const pct = max > 0 ? Math.max(0, Math.min(100, (current / max) * 100)) : 0;
+  const color = pct <= 25 ? 'bg-red-600' : pct <= 50 ? 'bg-amber-500' : 'bg-emerald-600';
+  return (
+    <div className="flex items-center gap-2">
+      <div className="relative h-5 flex-1 overflow-hidden rounded-full bg-stone-200 dark:bg-stone-700">
+        <div className={`h-full ${color} transition-all duration-300`} style={{ width: `${pct}%` }} />
+        <span className="absolute inset-0 flex items-center justify-center text-xs font-semibold text-white [text-shadow:0_1px_2px_rgb(0_0_0_/_0.6)]">
+          {current} / {max}
+        </span>
+      </div>
+      {temp > 0 && (
+        <span className="whitespace-nowrap rounded-full bg-sky-100 px-2 py-0.5 text-xs font-medium text-sky-700 dark:bg-sky-900/40 dark:text-sky-300">
+          +{temp} temp
+        </span>
+      )}
+    </div>
+  );
+}
 
 export default function CharacterSheet() {
   const { id } = useParams();
@@ -460,6 +483,7 @@ function CombatTab({
 
       <div className="space-y-3">
         <h3 className="section-title">Hit Points</h3>
+        <HealthBar current={character.hpCurrent} max={hpMax} temp={character.hpTemp} />
         <div className="grid grid-cols-3 gap-2 text-center">
           <div>
             <label className="label">Current</label>
@@ -594,11 +618,12 @@ function CombatTab({
           />
         </div>
         <div>
-          <label className="label">Conditions (comma separated)</label>
-          <input
-            className="input"
-            value={character.conditions.join(', ')}
-            onChange={(e) => update({ conditions: e.target.value.split(',').map((s) => s.trim()).filter(Boolean) })}
+          <label className="label">Conditions</label>
+          <MultiSelectChips
+            options={CONDITION_NAMES}
+            values={character.conditions}
+            onChange={(conditions) => update({ conditions })}
+            placeholder="Add conditions…"
           />
         </div>
         {(character.exhaustion > 0 || character.conditions.length > 0) && (
@@ -764,17 +789,18 @@ function SpellsTab({
             </label>
           </div>
         </div>
-        <select className="input" value="" onChange={(e) => learnSpell(e.target.value)}>
-          <option value="">Choose a spell to add…</option>
-          {learnableSpells.map((sp) => (
-            <option key={sp.key} value={sp.key}>
-              {sp.name} ({sp.level === 0 ? 'Cantrip' : `Lv ${sp.level}`})
-              {showAnyClass && !sp.classes.some((c) => classKeys.includes(c))
+        <SearchableSelect
+          placeholder="Search spells to add…"
+          onSelect={learnSpell}
+          options={learnableSpells.map((sp) => ({
+            value: sp.key,
+            label:
+              `${sp.name} (${sp.level === 0 ? 'Cantrip' : `Lv ${sp.level}`})` +
+              (showAnyClass && !sp.classes.some((c) => classKeys.includes(c))
                 ? ` — ${sp.classes.map((c) => compendium.classes[c]?.name ?? c).join('/')}`
-                : ''}
-            </option>
-          ))}
-        </select>
+                : ''),
+          }))}
+        />
         {showAnyClass && (
           <p className="mt-1.5 text-xs text-amber-700 dark:text-amber-400">
             Homebrew/off-list spells are included here for flexibility — your DM may not allow spells outside your
@@ -999,17 +1025,14 @@ function InventoryTab({
               Show all
             </label>
           </div>
-          <select className="input" value="" onChange={(e) => addItem(e.target.value)}>
-            <option value="">Choose an item…</option>
-            {Object.values(compendium.items)
+          <SearchableSelect
+            placeholder="Search items…"
+            onSelect={addItem}
+            options={Object.values(compendium.items)
               .filter((item) => showAllItems || isProficientWithItem(character, compendium, item))
               .sort((a, b) => a.name.localeCompare(b.name))
-              .map((item) => (
-                <option key={item.key} value={item.key}>
-                  {item.name}
-                </option>
-              ))}
-          </select>
+              .map((item) => ({ value: item.key, label: item.name }))}
+          />
         </div>
       </div>
 

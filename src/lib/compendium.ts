@@ -461,6 +461,7 @@ function sanitizeSubclasses(value: unknown, warnKey: (name: string) => string): 
       name: String(s.name ?? 'Subclass'),
       features: sanitizeFeatures(s.features),
       resources: s.resources != null ? sanitizeResources(s.resources) : undefined,
+      bonusSkills: Array.isArray(s.bonusSkills) ? (s.bonusSkills as Subclass['bonusSkills']) : undefined,
     }));
 }
 

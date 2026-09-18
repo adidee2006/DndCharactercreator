@@ -22,3 +22,8 @@ export function knownConditionEffect(raw: string): string | null {
   const key = raw.trim().toLowerCase();
   return CONDITION_EFFECTS[key] ?? null;
 }
+
+/** Title-cased condition names for a picker, excluding "exhaustion" — that's tracked as its own numeric level field, not a condition string. */
+export const CONDITION_NAMES = Object.keys(CONDITION_EFFECTS)
+  .filter((k) => k !== 'exhaustion')
+  .map((k) => k[0].toUpperCase() + k.slice(1));
