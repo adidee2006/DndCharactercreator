@@ -92,6 +92,12 @@ export default function Sync() {
         required.
       </p>
 
+      <div className="card mb-6 border border-amber-300 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
+        <strong>Work in progress:</strong> a short, reusable account-style code (instead of the long one below) is
+        on hold until there's a properly secure backend for it. The code-based sync below is unaffected and works
+        today.
+      </div>
+
       <div className="card mb-6 p-5">
         <h2 className="section-title">How this works</h2>
         <ul className="ml-4 list-disc space-y-1 text-sm text-stone-500">
