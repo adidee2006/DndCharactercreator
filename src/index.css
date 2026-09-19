@@ -16,6 +16,17 @@ html.dark {
   color-scheme: dark;
 }
 
+/*
+ * iOS Safari (especially as a Home Screen "standalone" app) can require a
+ * second tap on links/buttons — the first tap is consumed resolving a
+ * 300ms double-tap-to-zoom / tap-highlight gesture rather than firing the
+ * click immediately. This removes that ambiguity app-wide.
+ */
+a, button, [role='button'], summary {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
 body {
   @apply text-stone-900 dark:text-stone-100;
   font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, sans-serif;

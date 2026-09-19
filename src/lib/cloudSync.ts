@@ -32,7 +32,16 @@ export async function deleteCharacterFromCloud(id: string): Promise<void> {
   const uid = currentUid();
   if (!uid) return;
   try {
-    await deleteDoc(doc(db, 'users', uid, 'characters', id));
+    // Deleting the character doc alone isn't enough for sync: another
+    // device that already has this character locally would just see it
+    // absent from the cloud, which is indistinguishable from "never
+    // uploaded yet" — so it would never learn the character was deleted,
+    // and could even resurrect it on its next auto-upload. A tombstone
+    // makes the deletion itself a fact other devices can pull.
+    await Promise.all([
+      deleteDoc(doc(db, 'users', uid, 'characters', id)),
+      setDoc(doc(db, 'users', uid, 'deletions', id), { id, deletedAt: new Date().toISOString() }),
+    ]);
   } catch {
     // Best-effort, same as above.
   }

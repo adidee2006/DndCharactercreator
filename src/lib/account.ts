@@ -10,7 +10,7 @@ import {
 } from 'firebase/auth';
 import { collection, getDocs } from 'firebase/firestore';
 import { auth, db } from './firebase';
-import { listCharacters, getCharacter, putCharacterRaw } from './characters';
+import { listCharacters, getCharacter, putCharacterRaw, deleteCharacterLocalOnly } from './characters';
 import { uploadCharacterToCloud } from './cloudSync';
 import type { Character } from '../types/character';
 
@@ -101,16 +101,6 @@ function requireUid(): string {
   return user.uid;
 }
 
-/** Uploads every character currently saved on this device to the account's cloud storage, unconditionally. */
-export async function pushCharactersToCloud(): Promise<number> {
-  requireUid();
-  const characters = await listCharacters();
-  for (const character of characters) {
-    await uploadCharacterToCloud(character);
-  }
-  return characters.length;
-}
-
 async function fetchCloudCharacters(uid: string): Promise<Map<string, Character>> {
   const snapshot = await getDocs(collection(db, 'users', uid, 'characters'));
   const byId = new Map<string, Character>();
@@ -122,16 +112,52 @@ async function fetchCloudCharacters(uid: string): Promise<Map<string, Character>
 }
 
 /**
+ * Deletions are tombstoned (see cloudSync.ts) rather than just removing the
+ * character doc, so other devices can tell "deleted elsewhere" apart from
+ * "never uploaded from this device yet." Maps character id -> deletedAt.
+ */
+async function fetchCloudDeletions(uid: string): Promise<Map<string, string>> {
+  const snapshot = await getDocs(collection(db, 'users', uid, 'deletions'));
+  const byId = new Map<string, string>();
+  for (const docSnap of snapshot.docs) {
+    const data = docSnap.data() as { id?: string; deletedAt?: string };
+    if (data?.id && data.deletedAt) byId.set(data.id, data.deletedAt);
+  }
+  return byId;
+}
+
+/** Uploads every character currently saved on this device to the account's cloud storage, unconditionally — except one a tombstone says was deleted at least as recently, which would just resurrect it. */
+export async function pushCharactersToCloud(): Promise<number> {
+  const uid = requireUid();
+  const [characters, deletions] = await Promise.all([listCharacters(), fetchCloudDeletions(uid)]);
+  let uploaded = 0;
+  for (const character of characters) {
+    const tombstoneAt = deletions.get(character.id);
+    if (tombstoneAt && tombstoneAt >= character.updatedAt) continue;
+    await uploadCharacterToCloud(character);
+    uploaded++;
+  }
+  return uploaded;
+}
+
+/**
  * Uploads only local characters that are missing from the cloud or newer
- * than what's already there. Safe to run automatically (e.g. right after
- * sign-in) without a stale local copy clobbering a newer edit made on
- * another device.
+ * than what's already there, and skips anything tombstoned as deleted at
+ * least as recently as this device's copy. Safe to run automatically (e.g.
+ * right after sign-in) without a stale local copy clobbering a newer edit —
+ * or a deletion — made on another device.
  */
 export async function pushNewerCharactersToCloud(): Promise<number> {
   const uid = requireUid();
-  const [localCharacters, cloudById] = await Promise.all([listCharacters(), fetchCloudCharacters(uid)]);
+  const [localCharacters, cloudById, deletions] = await Promise.all([
+    listCharacters(),
+    fetchCloudCharacters(uid),
+    fetchCloudDeletions(uid),
+  ]);
   let uploaded = 0;
   for (const local of localCharacters) {
+    const tombstoneAt = deletions.get(local.id);
+    if (tombstoneAt && tombstoneAt >= local.updatedAt) continue;
     const cloud = cloudById.get(local.id);
     if (!cloud || cloud.updatedAt < local.updatedAt) {
       await uploadCharacterToCloud(local);
@@ -144,21 +170,30 @@ export async function pushNewerCharactersToCloud(): Promise<number> {
 export interface CloudPullResult {
   imported: number;
   keptLocal: number;
+  deletedLocally: number;
 }
 
 /**
  * Downloads every character stored in the account's cloud storage and merges
  * it into this device's local database. A locally-newer character (by
- * `updatedAt`) is never overwritten by an older cloud copy.
+ * `updatedAt`) is never overwritten by an older cloud copy. Also applies any
+ * deletion tombstones: a character deleted on another device is removed
+ * locally too, unless this device's copy was edited more recently than the
+ * deletion (in which case it's kept, as a newer edit "undoing" the delete).
  */
 export async function pullCharactersFromCloud(): Promise<CloudPullResult> {
   const uid = requireUid();
-  const snapshot = await getDocs(collection(db, 'users', uid, 'characters'));
+  const [snapshot, deletions] = await Promise.all([
+    getDocs(collection(db, 'users', uid, 'characters')),
+    fetchCloudDeletions(uid),
+  ]);
+  const cloudIds = new Set<string>();
   let imported = 0;
   let keptLocal = 0;
   for (const docSnap of snapshot.docs) {
     const character = docSnap.data() as Character;
     if (!character || !character.id) continue;
+    cloudIds.add(character.id);
     const existing = await getCharacter(character.id);
     if (existing && existing.updatedAt >= character.updatedAt) {
       keptLocal++;
@@ -167,5 +202,16 @@ export async function pullCharactersFromCloud(): Promise<CloudPullResult> {
     await putCharacterRaw(character);
     imported++;
   }
-  return { imported, keptLocal };
+
+  let deletedLocally = 0;
+  for (const [id, deletedAt] of deletions) {
+    if (cloudIds.has(id)) continue; // a live character doc always wins over an old tombstone
+    const existing = await getCharacter(id);
+    if (existing && existing.updatedAt <= deletedAt) {
+      await deleteCharacterLocalOnly(id);
+      deletedLocally++;
+    }
+  }
+
+  return { imported, keptLocal, deletedLocally };
 }

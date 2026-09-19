@@ -41,6 +41,11 @@ export async function deleteCharacter(id: string): Promise<void> {
   void deleteCharacterFromCloud(id);
 }
 
+/** Removes a character locally only — used when a cloud tombstone says another device already deleted it. */
+export async function deleteCharacterLocalOnly(id: string): Promise<void> {
+  await db.characters.delete(id);
+}
+
 export async function duplicateCharacter(id: string): Promise<Character | undefined> {
   const original = await db.characters.get(id);
   if (!original) return undefined;

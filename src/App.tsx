@@ -13,11 +13,31 @@ function App() {
     document.documentElement.classList.toggle('dark', theme === 'dark');
   }, [theme]);
 
+  // iOS can leave a Home Screen "standalone" app's WebView in a stale state
+  // after it's been backgrounded (screen locked, app-switched away) — touch
+  // handlers appear present but the first tap on return doesn't register.
+  // Forcing a reflow when the page becomes visible again is the standard
+  // mitigation for that class of bug.
+  useEffect(() => {
+    function nudge() {
+      if (document.visibilityState === 'visible') {
+        void document.body.offsetHeight;
+      }
+    }
+    document.addEventListener('visibilitychange', nudge);
+    window.addEventListener('pageshow', nudge);
+    return () => {
+      document.removeEventListener('visibilitychange', nudge);
+      window.removeEventListener('pageshow', nudge);
+    };
+  }, []);
+
   // Whenever an account is (or becomes) signed in — including a session
-  // restored on app load — reconcile this device with the cloud once:
-  // push anything local that's new or newer, then pull down anything from
-  // other devices this one doesn't have yet. Runs app-wide, not just while
-  // the Account page happens to be open.
+  // restored on app load — reconcile this device with the cloud once: pull
+  // first (so any deletion tombstones remove stale local characters before
+  // they'd otherwise get re-uploaded), then push anything local that's new
+  // or newer. Runs app-wide, not just while the Account page happens to be
+  // open.
   useEffect(() => {
     return subscribeToAuth((user) => {
       if (!user) {
@@ -26,10 +46,10 @@ function App() {
       }
       if (syncedUidRef.current === user.uid) return;
       syncedUidRef.current = user.uid;
-      pushNewerCharactersToCloud()
+      pullCharactersFromCloud()
         .catch(() => {})
         .finally(() => {
-          pullCharactersFromCloud().catch(() => {});
+          pushNewerCharactersToCloud().catch(() => {});
         });
     });
   }, []);

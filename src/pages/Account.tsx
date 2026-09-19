@@ -189,6 +189,8 @@ function CloudPanel({ user }: { user: User }) {
         kind: 'ok',
         text: `Downloaded ${result.imported} character${result.imported === 1 ? '' : 's'}.${
           result.keptLocal > 0 ? ` Kept ${result.keptLocal} local version${result.keptLocal === 1 ? '' : 's'} that looked newer than the cloud copy.` : ''
+        }${
+          result.deletedLocally > 0 ? ` Removed ${result.deletedLocally} character${result.deletedLocally === 1 ? '' : 's'} deleted on another device.` : ''
         }`,
       });
     } catch (err) {

@@ -1,7 +1,10 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /users/{uid}/characters/{characterId} {
+    // Covers every subcollection under a user's uid (characters, deletion
+    // tombstones, and anything added later) with the same owner-only rule,
+    // instead of listing each subcollection path individually.
+    match /users/{uid}/{document=**} {
       allow read, write: if request.auth != null && request.auth.uid == uid;
     }
   }
