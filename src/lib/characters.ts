@@ -1,6 +1,7 @@
 import { v4 as uuid } from 'uuid';
 import { db } from './db';
 import { createBlankCharacter, type Character } from '../types/character';
+import { uploadCharacterToCloud, deleteCharacterFromCloud } from './cloudSync';
 
 export async function listCharacters(): Promise<Character[]> {
   const all = await db.characters.toArray();
@@ -14,16 +15,19 @@ export async function getCharacter(id: string): Promise<Character | undefined> {
 export async function createCharacter(): Promise<Character> {
   const character = createBlankCharacter(uuid());
   await db.characters.put(character);
+  void uploadCharacterToCloud(character);
   return character;
 }
 
 export async function saveCharacter(character: Character): Promise<void> {
   const updated: Character = { ...character, updatedAt: new Date().toISOString() };
   await db.characters.put(updated);
+  void uploadCharacterToCloud(updated);
 }
 
 export async function deleteCharacter(id: string): Promise<void> {
   await db.characters.delete(id);
+  void deleteCharacterFromCloud(id);
 }
 
 export async function duplicateCharacter(id: string): Promise<Character | undefined> {
@@ -32,6 +36,7 @@ export async function duplicateCharacter(id: string): Promise<Character | undefi
   const now = new Date().toISOString();
   const copy: Character = { ...original, id: uuid(), name: `${original.name} (Copy)`, createdAt: now, updatedAt: now };
   await db.characters.put(copy);
+  void uploadCharacterToCloud(copy);
   return copy;
 }
 
@@ -44,5 +49,6 @@ export async function importCharacterFromJson(json: unknown): Promise<Character>
   const blank = createBlankCharacter(uuid());
   const character: Character = { ...blank, ...parsed, id: uuid(), createdAt: now, updatedAt: now };
   await db.characters.put(character);
+  void uploadCharacterToCloud(character);
   return character;
 }

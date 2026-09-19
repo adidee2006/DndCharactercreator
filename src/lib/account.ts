@@ -1,14 +1,17 @@
 import {
   createUserWithEmailAndPassword,
+  GoogleAuthProvider,
   onAuthStateChanged,
   sendPasswordResetEmail,
   signInWithEmailAndPassword,
+  signInWithPopup,
   signOut,
   type User,
 } from 'firebase/auth';
-import { collection, doc, getDocs, setDoc } from 'firebase/firestore';
+import { collection, getDocs } from 'firebase/firestore';
 import { auth, db } from './firebase';
 import { listCharacters, getCharacter, saveCharacter } from './characters';
+import { uploadCharacterToCloud } from './cloudSync';
 import type { Character } from '../types/character';
 
 /*
@@ -42,6 +45,15 @@ function friendlyAuthError(err: unknown): string {
       return 'Wrong email or password.';
     case 'auth/too-many-requests':
       return 'Too many attempts — wait a bit and try again.';
+    case 'auth/popup-closed-by-user':
+    case 'auth/cancelled-popup-request':
+      return 'Sign-in window was closed before finishing.';
+    case 'auth/popup-blocked':
+      return 'Your browser blocked the sign-in popup — allow popups for this site and try again.';
+    case 'auth/unauthorized-domain':
+      return 'This site isn’t authorized for Google sign-in yet.';
+    case 'auth/account-exists-with-different-credential':
+      return 'An account already exists with this email using a different sign-in method.';
     default:
       return (err as Error)?.message || 'Something went wrong.';
   }
@@ -58,6 +70,14 @@ export async function signUp(email: string, password: string): Promise<void> {
 export async function logIn(email: string, password: string): Promise<void> {
   try {
     await signInWithEmailAndPassword(auth, email, password);
+  } catch (err) {
+    throw new Error(friendlyAuthError(err));
+  }
+}
+
+export async function signInWithGoogle(): Promise<void> {
+  try {
+    await signInWithPopup(auth, new GoogleAuthProvider());
   } catch (err) {
     throw new Error(friendlyAuthError(err));
   }
@@ -83,15 +103,10 @@ function requireUid(): string {
 
 /** Uploads every character currently saved on this device to the account's cloud storage. */
 export async function pushCharactersToCloud(): Promise<number> {
-  const uid = requireUid();
+  requireUid();
   const characters = await listCharacters();
   for (const character of characters) {
-    // Firestore rejects `undefined` field values outright, but plenty of
-    // optional Character fields (secondFightingStyle, twoHanded, etc.) are
-    // `undefined` rather than omitted. Round-tripping through JSON strips
-    // those the same way JSON export/import already does.
-    const sanitized = JSON.parse(JSON.stringify(character));
-    await setDoc(doc(db, 'users', uid, 'characters', character.id), sanitized);
+    await uploadCharacterToCloud(character);
   }
   return characters.length;
 }

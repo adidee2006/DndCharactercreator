@@ -6,6 +6,7 @@ import {
   logIn,
   logOut,
   resetPassword,
+  signInWithGoogle,
   pushCharactersToCloud,
   pullCharactersFromCloud,
 } from '../lib/account';
@@ -62,8 +63,43 @@ function AuthForm({ onDone }: { onDone: () => void }) {
     }
   }
 
+  async function handleGoogle() {
+    setBusy(true);
+    setError(null);
+    setResetSent(false);
+    try {
+      await signInWithGoogle();
+      onDone();
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
-    <form onSubmit={handleSubmit}>
+    <div>
+      <button
+        type="button"
+        className="btn-secondary mb-4 flex w-full items-center justify-center gap-2"
+        onClick={handleGoogle}
+        disabled={busy}
+      >
+        <svg width="16" height="16" viewBox="0 0 48 48" aria-hidden="true">
+          <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" />
+          <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.9-2.26 5.36-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z" />
+          <path fill="#FBBC05" d="M10.53 28.59A14.5 14.5 0 019.5 24c0-1.59.27-3.13.75-4.59l-7.98-6.19A23.94 23.94 0 000 24c0 3.86.92 7.5 2.56 10.78l7.97-6.19z" />
+          <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z" />
+        </svg>
+        Continue with Google
+      </button>
+      <div className="mb-4 flex items-center gap-3 text-xs text-stone-400">
+        <div className="h-px flex-1 bg-stone-200 dark:bg-stone-800" />
+        or
+        <div className="h-px flex-1 bg-stone-200 dark:bg-stone-800" />
+      </div>
+
+      <form onSubmit={handleSubmit}>
       <div className="mb-4 flex gap-1 rounded-lg bg-stone-200/60 p-1 dark:bg-stone-800/60">
         <button
           type="button"
@@ -122,13 +158,21 @@ function AuthForm({ onDone }: { onDone: () => void }) {
           </button>
         )}
       </div>
-    </form>
+      </form>
+    </div>
   );
 }
 
 function CloudPanel({ user }: { user: User }) {
   const [busy, setBusy] = useState<'push' | 'pull' | null>(null);
   const [message, setMessage] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null);
+
+  // Characters now auto-upload as you edit them, but anything created before
+  // this login (or while offline) hasn't reached the cloud yet — catch it up
+  // silently the moment an account becomes signed in.
+  useEffect(() => {
+    pushCharactersToCloud().catch(() => {});
+  }, []);
 
   async function handlePush() {
     setBusy('push');
@@ -164,13 +208,14 @@ function CloudPanel({ user }: { user: User }) {
   return (
     <div>
       <p className="mb-4 text-sm text-stone-500">
-        Signed in as <span className="font-medium text-stone-700 dark:text-stone-300">{user.email}</span>.
+        Signed in as{' '}
+        <span className="font-medium text-stone-700 dark:text-stone-300">{user.email ?? user.displayName ?? 'your account'}</span>.
       </p>
       <div className="flex flex-wrap gap-2">
-        <button className="btn-primary" onClick={handlePush} disabled={busy !== null}>
-          {busy === 'push' ? 'Uploading…' : 'Upload My Characters'}
+        <button className="btn-secondary" onClick={handlePush} disabled={busy !== null}>
+          {busy === 'push' ? 'Uploading…' : 'Force Re-upload Everything'}
         </button>
-        <button className="btn-secondary" onClick={handlePull} disabled={busy !== null}>
+        <button className="btn-primary" onClick={handlePull} disabled={busy !== null}>
           {busy === 'pull' ? 'Downloading…' : 'Download My Characters'}
         </button>
         <button className="btn-ghost" onClick={() => logOut()} disabled={busy !== null}>
@@ -178,8 +223,9 @@ function CloudPanel({ user }: { user: User }) {
         </button>
       </div>
       <p className="mt-2 text-xs text-stone-500">
-        Upload sends everything currently saved on this device to your account. Download pulls everything from your
-        account into this device — a local character is only overwritten if the cloud copy is newer.
+        Characters on this device now upload to your account automatically as you create, edit, or delete them —
+        no need to click anything. Download pulls everything from your account into this device (useful on a new
+        device); a local character is only overwritten if the cloud copy is newer.
       </p>
       {message && (
         <p className={`mt-3 text-sm ${message.kind === 'error' ? 'text-red-700 dark:text-red-400' : 'text-emerald-700 dark:text-emerald-400'}`}>
