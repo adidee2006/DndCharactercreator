@@ -36,8 +36,8 @@ function App() {
             <Link to="/compendium" className="btn-ghost">
               Compendium
             </Link>
-            <Link to="/sync" className="btn-ghost">
-              Sync
+            <Link to="/account" className="btn-ghost">
+              Account
             </Link>
             <Link to="/new" className="btn-primary">
               + New Character
