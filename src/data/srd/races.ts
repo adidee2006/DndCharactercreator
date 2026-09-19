@@ -15,6 +15,8 @@ export const races: Record<string, Race> = {
     key: 'aasimar',
     name: 'Aasimar',
     source: PHB24,
+    description:
+      'Aasimar carry a spark of the Upper Planes in their bloodline, marked by some outward sign of their celestial heritage — a faint luminance to the eyes, silvery or metallic-toned skin, a voice that seems to carry an echo, or hair in colors no mortal parentage would explain. They otherwise look much like the people around them, and many live their whole lives without their nature ever manifesting visibly beyond these small, telling details.',
     size: 'Medium',
     speed: 30,
     darkvision: 60,
@@ -40,6 +42,8 @@ export const races: Record<string, Race> = {
     key: 'dragonborn',
     name: 'Dragonborn',
     source: PHB24,
+    description:
+      'Dragonborn stand tall and powerfully built, with a draconic head, scaled skin in a color tied to their ancestry (red, blue, white, black, green, and beyond), and no tail. They carry themselves with a proud, deliberate bearing, and their voices carry a faint resonant hiss or rumble that marks them as something other than human at a glance.',
     size: 'Medium',
     speed: 30,
     darkvision: 60,
@@ -63,6 +67,8 @@ export const races: Record<string, Race> = {
     key: 'dwarf',
     name: 'Dwarf',
     source: PHB24,
+    description:
+      'Dwarves are short and stocky, standing well under five feet but built with a dense, muscular frame that makes them as heavy as a much taller human. Their skin ranges from deep tan to ruddy brown to nearly black, and both men and women take great pride in long, carefully groomed hair and, for men, elaborately kept beards.',
     size: 'Medium',
     speed: 30,
     darkvision: 120,
@@ -82,6 +88,8 @@ export const races: Record<string, Race> = {
     key: 'elf',
     name: 'Elf',
     source: PHB24,
+    description:
+      'Elves are slender and graceful, with sharply angled features and pointed ears, and a way of moving that reads as unhurried and precise even when they are not. Their true age is hard to guess from appearance alone — elves live many centuries and show few outward signs of aging once they reach adulthood, with eyes that often seem to hold far more years than a young face suggests.',
     size: 'Medium',
     speed: 30,
     darkvision: 60,
@@ -122,6 +130,8 @@ export const races: Record<string, Race> = {
     key: 'gnome',
     name: 'Gnome',
     source: PHB24,
+    description:
+      'Gnomes are small — typically under four feet tall — with wide, animated features and a build that skews slight rather than stocky. Their skin, hair, and eyes often run to earthy or faintly unusual tones (deep tan, ruddy, or even a pale blue or green cast), and their expressions tend to be lively and quick to shift, matching a curiosity that rarely sits still.',
     size: 'Small',
     speed: 30,
     darkvision: 60,
@@ -156,6 +166,8 @@ export const races: Record<string, Race> = {
     key: 'goliath',
     name: 'Goliath',
     source: PHB24,
+    description:
+      'Goliaths are huge by human standards, often nearing seven feet tall with a heavily muscled frame built for enduring harsh mountain terrain. Their skin carries a stone-like mottling of gray tones, sometimes with a faint natural pattern almost like a birthmark, and they favor practical, close-cropped hair and simple, functional dress over ornamentation.',
     size: 'Medium',
     speed: 35,
     abilityBonuses: [],
@@ -174,6 +186,8 @@ export const races: Record<string, Race> = {
     key: 'halfling',
     name: 'Halfling',
     source: PHB24,
+    description:
+      'Halflings stand around three feet tall, with round, friendly faces and a build that leans toward the comfortably plump rather than lean. They move quietly and easily, favor bright, practical clothing, and carry themselves with an easy warmth that tends to put strangers at ease almost immediately.',
     size: 'Small',
     speed: 30,
     abilityBonuses: [],
@@ -189,6 +203,8 @@ export const races: Record<string, Race> = {
     key: 'human',
     name: 'Human',
     source: PHB24,
+    description:
+      'Humans show the widest range of appearance of any people — every height, build, skin tone, and hair color imaginable, shaped by whatever region or culture they hail from. What unites them isn\'t a look but a restless drive: humans tend toward ambition and adaptability, and they build the most varied and far-reaching societies of any folk.',
     size: 'Medium',
     speed: 30,
     abilityBonuses: [],
@@ -205,6 +221,8 @@ export const races: Record<string, Race> = {
     key: 'orc',
     name: 'Orc',
     source: PHB24,
+    description:
+      'Orcs are tall and powerfully built, with prominent lower canines, sloped brows, and grayish to greenish skin tones. Their strength is immediately apparent in their frame and bearing, though individual orcs vary just as widely in temperament and demeanor as any other people, from fierce and blunt to thoughtful and reserved.',
     size: 'Medium',
     speed: 30,
     darkvision: 120,
@@ -223,6 +241,8 @@ export const races: Record<string, Race> = {
     key: 'tiefling',
     name: 'Tiefling',
     source: PHB24,
+    description:
+      'Tieflings bear a visible mark of fiendish ancestry: horns sweeping back from the forehead in shapes as varied as a person\'s face, a long tail, sharply pointed teeth, and eyes that are solid pools of black, red, white, silver, or gold with no visible sclera. Skin tones range from ordinary human hues to shades of red, purple, or ash-gray, and most tieflings grow up keenly aware of the wary looks their appearance draws.',
     size: 'Medium',
     speed: 30,
     darkvision: 60,

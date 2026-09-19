@@ -96,6 +96,8 @@ export interface Race {
   key: string;
   name: string;
   source: SourceInfo;
+  /** General physical appearance/flavor blurb — used to seed a character's Appearance field on the Bio tab. */
+  description?: string;
   size: 'Tiny' | 'Small' | 'Medium' | 'Large';
   speed: number;
   abilityBonuses: AbilityBonus[];
@@ -199,6 +201,8 @@ export interface Background {
   key: string;
   name: string;
   source: SourceInfo;
+  /** General life-path/flavor blurb — used to seed a character's Backstory field on the Bio tab. */
+  description?: string;
   skillProficiencies: SkillKey[];
   toolProficiencies: string[];
   languages: number;

@@ -13,6 +13,8 @@ export const backgrounds: Record<string, Background> = {
     key: 'acolyte',
     name: 'Acolyte',
     source: PHB24,
+    description:
+      'You spent your early years in service to a temple, learning its rites and traditions, performing sacred ceremonies, and tending to the needs of worshippers. Whether you left that life behind for adventure or carry it with you still, the faith you were raised in shaped how you see the world.',
     skillProficiencies: ['insight', 'religion'],
     toolProficiencies: [],
     languages: 2,
@@ -29,6 +31,8 @@ export const backgrounds: Record<string, Background> = {
     key: 'artisan',
     name: 'Artisan',
     source: PHB24,
+    description:
+      "You trained for years under a master craftsperson, learning a trade and taking pride in work made with your own hands. Whatever led you away from the workshop, your training left you with a practical, hands-on outlook and a guild's worth of useful connections.",
     skillProficiencies: ['investigation', 'persuasion'],
     toolProficiencies: ["One artisan's tools"],
     languages: 0,
@@ -45,6 +49,8 @@ export const backgrounds: Record<string, Background> = {
     key: 'charlatan',
     name: 'Charlatan',
     source: PHB24,
+    description:
+      "You've made a living reading people and telling them exactly what they want to hear — a con artist, a smooth talker, or a bit of both. Somewhere along the way you learned that a confident lie travels further than an awkward truth.",
     skillProficiencies: ['deception', 'sleightOfHand'],
     toolProficiencies: ['Forgery kit'],
     languages: 0,
@@ -61,6 +67,8 @@ export const backgrounds: Record<string, Background> = {
     key: 'criminal',
     name: 'Criminal',
     source: PHB24,
+    description:
+      "You lived on the wrong side of the law — a thief, smuggler, enforcer, or something else the watch would like a word with you about. Whatever your specialty, you learned to move unseen, read a room for threats, and keep a contact or two you can still trust.",
     skillProficiencies: ['sleightOfHand', 'stealth'],
     toolProficiencies: ["Thieves' tools"],
     languages: 0,
@@ -77,6 +85,8 @@ export const backgrounds: Record<string, Background> = {
     key: 'entertainer',
     name: 'Entertainer',
     source: PHB24,
+    description:
+      "You made your living holding a crowd's attention — as a musician, dancer, actor, or storyteller — moving from town to town and stage to stage. You learned to read an audience quickly, and performing for strangers left you comfortable being the center of attention.",
     skillProficiencies: ['acrobatics', 'performance'],
     toolProficiencies: ['Disguise kit', 'One musical instrument'],
     languages: 0,
@@ -93,6 +103,8 @@ export const backgrounds: Record<string, Background> = {
     key: 'farmer',
     name: 'Farmer',
     source: PHB24,
+    description:
+      "You grew up working the land — tending crops or livestock, mending fences and tools, and learning that a community survives on everyone doing their part. That upbringing left you practical, hardy, and unimpressed by titles that don't come with calluses.",
     skillProficiencies: ['animalHandling', 'nature'],
     toolProficiencies: ["Carpenter's tools"],
     languages: 0,
@@ -109,6 +121,8 @@ export const backgrounds: Record<string, Background> = {
     key: 'guard',
     name: 'Guard',
     source: PHB24,
+    description:
+      "You stood watch — over a city gate, a noble's household, a caravan, or a prison — and learned to read trouble before it started. The work gave you a keen eye for danger and a plain, disciplined sense of duty.",
     skillProficiencies: ['athletics', 'perception'],
     toolProficiencies: ['One gaming set'],
     languages: 0,
@@ -125,6 +139,8 @@ export const backgrounds: Record<string, Background> = {
     key: 'guide',
     name: 'Guide',
     source: PHB24,
+    description:
+      "You spent years leading others through wild or unfamiliar country, learning to read terrain, weather, and trouble on the horizon. The open road shaped you into someone restless indoors and most at ease when there's ground still to cover.",
     skillProficiencies: ['stealth', 'survival'],
     toolProficiencies: ["Cartographer's tools"],
     languages: 0,
@@ -141,6 +157,8 @@ export const backgrounds: Record<string, Background> = {
     key: 'hermit',
     name: 'Hermit',
     source: PHB24,
+    description:
+      "You lived for a long stretch in seclusion — a hidden cabin, a mountain shrine, a forgotten corner of the wild — whether by choice, exile, or a vow. That solitude gave you space to think deeply, and you emerged with a hard-won insight that still shapes how you see the world.",
     skillProficiencies: ['medicine', 'religion'],
     toolProficiencies: ['Herbalism kit'],
     languages: 1,
@@ -157,6 +175,8 @@ export const backgrounds: Record<string, Background> = {
     key: 'merchant',
     name: 'Merchant',
     source: PHB24,
+    description:
+      "You made your living buying, selling, and hauling goods between towns, learning the value of nearly everything and the temperament of nearly everyone. Years of dealing left you sharp with numbers and comfortable striking a bargain with a stranger.",
     skillProficiencies: ['animalHandling', 'persuasion'],
     toolProficiencies: ["Navigator's tools"],
     languages: 0,
@@ -173,6 +193,8 @@ export const backgrounds: Record<string, Background> = {
     key: 'noble',
     name: 'Noble',
     source: PHB24,
+    description:
+      "You were raised in a family of wealth, title, or influence, schooled from childhood in etiquette, politics, and the quiet expectation that you'd carry the family name well. Whatever you've done since, that upbringing still shows in how you carry yourself.",
     skillProficiencies: ['history', 'persuasion'],
     toolProficiencies: ['One gaming set'],
     languages: 1,
@@ -189,6 +211,8 @@ export const backgrounds: Record<string, Background> = {
     key: 'sage',
     name: 'Sage',
     source: PHB24,
+    description:
+      "You spent years buried in study — as a scholar, librarian, or researcher chasing knowledge for its own sake. That pursuit left you with a mind full of facts most people never think to wonder about, and a habit of wanting to know the why behind everything.",
     skillProficiencies: ['arcana', 'history'],
     toolProficiencies: [],
     languages: 2,
@@ -205,6 +229,8 @@ export const backgrounds: Record<string, Background> = {
     key: 'sailor',
     name: 'Sailor',
     source: PHB24,
+    description:
+      "You spent years crewing a ship, learning knots, weather, and the hard discipline of shipboard life alongside a crew you came to trust with your life. The sea left its mark on you — a rolling gait, a taste for hard work, and stories worth telling in any tavern.",
     skillProficiencies: ['acrobatics', 'perception'],
     toolProficiencies: ["Navigator's tools"],
     languages: 0,
@@ -221,6 +247,8 @@ export const backgrounds: Record<string, Background> = {
     key: 'scribe',
     name: 'Scribe',
     source: PHB24,
+    description:
+      "You made your living with careful penmanship and a steady hand — copying manuscripts, drafting official documents, or recording history as it happened. The work trained you to be precise and patient, and left you with an appreciation for the written word that most people never develop.",
     skillProficiencies: ['investigation', 'perception'],
     toolProficiencies: ["Calligrapher's supplies"],
     languages: 1,
@@ -237,6 +265,8 @@ export const backgrounds: Record<string, Background> = {
     key: 'soldier',
     name: 'Soldier',
     source: PHB24,
+    description:
+      "You served in an army — as a foot soldier, officer, or specialist — following orders, drilling for battle, and standing shoulder to shoulder with people who became closer than family. That service left you disciplined, battle-tested, and loyal to the ones who fought beside you.",
     skillProficiencies: ['athletics', 'intimidation'],
     toolProficiencies: ['One gaming set'],
     languages: 0,
@@ -253,6 +283,8 @@ export const backgrounds: Record<string, Background> = {
     key: 'wayfarer',
     name: 'Wayfarer',
     source: PHB24,
+    description:
+      "You grew up on the streets, fending for yourself and learning early how to read people, slip past trouble, and get by on wits alone. That upbringing left you street-smart and self-reliant, more comfortable in an alley than a parlor.",
     skillProficiencies: ['insight', 'stealth'],
     toolProficiencies: ["Thieves' tools"],
     languages: 0,

@@ -37,6 +37,7 @@ import { itemDescription } from '../lib/itemSummary';
 import { sourceCitation } from '../lib/sourceCitation';
 import { isProficientWithItem, isEligibleForFeat, getMaxAvailableSpellLevel, getSpellCounts, getSubclassBonusSpells } from '../lib/eligibility';
 import { availableFightingStyles, fightingStylesByKey } from '../data/srd/fightingStyles';
+import { getBioSuggestions } from '../lib/bioSuggestions';
 import { SearchableSelect } from '../components/SearchableSelect';
 import { MultiSelectChips } from '../components/MultiSelectChips';
 import { v4 as uuid } from 'uuid';
@@ -183,7 +184,7 @@ export default function CharacterSheet() {
         {tab === 'Spells' && <SpellsTab character={character} update={update} compendium={compendium} />}
         {tab === 'Inventory' && <InventoryTab character={character} update={update} compendium={compendium} />}
         {tab === 'Features' && <FeaturesTab character={character} update={update} compendium={compendium} />}
-        {tab === 'Bio' && <BioTab character={character} update={update} />}
+        {tab === 'Bio' && <BioTab character={character} update={update} compendium={compendium} />}
       </div>
     </div>
   );
@@ -1346,7 +1347,28 @@ function FeaturesTab({
   );
 }
 
-function BioTab({ character, update }: { character: Character; update: (p: Partial<Character>) => void }) {
+function BioTab({
+  character,
+  update,
+  compendium,
+}: {
+  character: Character;
+  update: (p: Partial<Character>) => void;
+  compendium: ReturnType<typeof useCompendium>['compendium'];
+}) {
+  // Seed any still-blank Bio field with a suggestion sourced from the
+  // character's race/background — never overwrites text the player already
+  // wrote, and re-checks if the race or background is changed later.
+  useEffect(() => {
+    const suggestions = getBioSuggestions(character, compendium);
+    const patch: Partial<Character> = {};
+    for (const key of Object.keys(suggestions) as (keyof typeof suggestions)[]) {
+      if (!character[key]) patch[key] = suggestions[key];
+    }
+    if (Object.keys(patch).length > 0) update(patch);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [character.id, character.race.key, character.background]);
+
   const fields: [keyof Character, string][] = [
     ['personalityTraits', 'Personality Traits'],
     ['ideals', 'Ideals'],
