@@ -86,7 +86,12 @@ export async function pushCharactersToCloud(): Promise<number> {
   const uid = requireUid();
   const characters = await listCharacters();
   for (const character of characters) {
-    await setDoc(doc(db, 'users', uid, 'characters', character.id), character);
+    // Firestore rejects `undefined` field values outright, but plenty of
+    // optional Character fields (secondFightingStyle, twoHanded, etc.) are
+    // `undefined` rather than omitted. Round-tripping through JSON strips
+    // those the same way JSON export/import already does.
+    const sanitized = JSON.parse(JSON.stringify(character));
+    await setDoc(doc(db, 'users', uid, 'characters', character.id), sanitized);
   }
   return characters.length;
 }
