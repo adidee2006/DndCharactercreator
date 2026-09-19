@@ -1,5 +1,5 @@
 import LZString from 'lz-string';
-import { listCharacters, getCharacter, saveCharacter } from './characters';
+import { listCharacters, getCharacter, putCharacterRaw } from './characters';
 import type { Character } from '../types/character';
 
 const SYNC_STORAGE_KEY = 'dnd-cc-sync-code';
@@ -113,7 +113,7 @@ export async function pullFromSyncCode(code: string): Promise<PullResult> {
       keptLocal++;
       continue;
     }
-    await saveCharacter(character as Character);
+    await putCharacterRaw(character as Character);
     imported++;
   }
   setStoredSyncCode(trimmed);

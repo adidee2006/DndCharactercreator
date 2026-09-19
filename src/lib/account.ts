@@ -10,7 +10,7 @@ import {
 } from 'firebase/auth';
 import { collection, getDocs } from 'firebase/firestore';
 import { auth, db } from './firebase';
-import { listCharacters, getCharacter, saveCharacter } from './characters';
+import { listCharacters, getCharacter, putCharacterRaw } from './characters';
 import { uploadCharacterToCloud } from './cloudSync';
 import type { Character } from '../types/character';
 
@@ -101,7 +101,7 @@ function requireUid(): string {
   return user.uid;
 }
 
-/** Uploads every character currently saved on this device to the account's cloud storage. */
+/** Uploads every character currently saved on this device to the account's cloud storage, unconditionally. */
 export async function pushCharactersToCloud(): Promise<number> {
   requireUid();
   const characters = await listCharacters();
@@ -109,6 +109,36 @@ export async function pushCharactersToCloud(): Promise<number> {
     await uploadCharacterToCloud(character);
   }
   return characters.length;
+}
+
+async function fetchCloudCharacters(uid: string): Promise<Map<string, Character>> {
+  const snapshot = await getDocs(collection(db, 'users', uid, 'characters'));
+  const byId = new Map<string, Character>();
+  for (const docSnap of snapshot.docs) {
+    const character = docSnap.data() as Character;
+    if (character?.id) byId.set(character.id, character);
+  }
+  return byId;
+}
+
+/**
+ * Uploads only local characters that are missing from the cloud or newer
+ * than what's already there. Safe to run automatically (e.g. right after
+ * sign-in) without a stale local copy clobbering a newer edit made on
+ * another device.
+ */
+export async function pushNewerCharactersToCloud(): Promise<number> {
+  const uid = requireUid();
+  const [localCharacters, cloudById] = await Promise.all([listCharacters(), fetchCloudCharacters(uid)]);
+  let uploaded = 0;
+  for (const local of localCharacters) {
+    const cloud = cloudById.get(local.id);
+    if (!cloud || cloud.updatedAt < local.updatedAt) {
+      await uploadCharacterToCloud(local);
+      uploaded++;
+    }
+  }
+  return uploaded;
 }
 
 export interface CloudPullResult {
@@ -134,7 +164,7 @@ export async function pullCharactersFromCloud(): Promise<CloudPullResult> {
       keptLocal++;
       continue;
     }
-    await saveCharacter(character);
+    await putCharacterRaw(character);
     imported++;
   }
   return { imported, keptLocal };

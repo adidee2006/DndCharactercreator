@@ -1,15 +1,38 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import { useUiStore } from './store/uiStore';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { subscribeToAuth, pushNewerCharactersToCloud, pullCharactersFromCloud } from './lib/account';
 
 function App() {
   const { theme, toggleTheme } = useUiStore();
   const location = useLocation();
+  const syncedUidRef = useRef<string | null>(null);
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark');
   }, [theme]);
+
+  // Whenever an account is (or becomes) signed in — including a session
+  // restored on app load — reconcile this device with the cloud once:
+  // push anything local that's new or newer, then pull down anything from
+  // other devices this one doesn't have yet. Runs app-wide, not just while
+  // the Account page happens to be open.
+  useEffect(() => {
+    return subscribeToAuth((user) => {
+      if (!user) {
+        syncedUidRef.current = null;
+        return;
+      }
+      if (syncedUidRef.current === user.uid) return;
+      syncedUidRef.current = user.uid;
+      pushNewerCharactersToCloud()
+        .catch(() => {})
+        .finally(() => {
+          pullCharactersFromCloud().catch(() => {});
+        });
+    });
+  }, []);
 
   return (
     <div className="min-h-screen">

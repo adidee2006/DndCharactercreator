@@ -25,6 +25,17 @@ export async function saveCharacter(character: Character): Promise<void> {
   void uploadCharacterToCloud(updated);
 }
 
+/**
+ * Stores a character exactly as given — no `updatedAt` bump, no cloud
+ * re-upload. Used when importing a character that's already the source of
+ * truth (pulled from the cloud or a sync code): treating that as a fresh
+ * "edit" would keep nudging its timestamp forward on every sync and
+ * defeat the newer-wins comparison sync relies on.
+ */
+export async function putCharacterRaw(character: Character): Promise<void> {
+  await db.characters.put(character);
+}
+
 export async function deleteCharacter(id: string): Promise<void> {
   await db.characters.delete(id);
   void deleteCharacterFromCloud(id);

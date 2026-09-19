@@ -167,13 +167,6 @@ function CloudPanel({ user }: { user: User }) {
   const [busy, setBusy] = useState<'push' | 'pull' | null>(null);
   const [message, setMessage] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null);
 
-  // Characters now auto-upload as you edit them, but anything created before
-  // this login (or while offline) hasn't reached the cloud yet — catch it up
-  // silently the moment an account becomes signed in.
-  useEffect(() => {
-    pushCharactersToCloud().catch(() => {});
-  }, []);
-
   async function handlePush() {
     setBusy('push');
     setMessage(null);
@@ -215,17 +208,18 @@ function CloudPanel({ user }: { user: User }) {
         <button className="btn-secondary" onClick={handlePush} disabled={busy !== null}>
           {busy === 'push' ? 'Uploading…' : 'Force Re-upload Everything'}
         </button>
-        <button className="btn-primary" onClick={handlePull} disabled={busy !== null}>
-          {busy === 'pull' ? 'Downloading…' : 'Download My Characters'}
+        <button className="btn-secondary" onClick={handlePull} disabled={busy !== null}>
+          {busy === 'pull' ? 'Downloading…' : 'Force Re-download Everything'}
         </button>
         <button className="btn-ghost" onClick={() => logOut()} disabled={busy !== null}>
           Sign Out
         </button>
       </div>
       <p className="mt-2 text-xs text-stone-500">
-        Characters on this device now upload to your account automatically as you create, edit, or delete them —
-        no need to click anything. Download pulls everything from your account into this device (useful on a new
-        device); a local character is only overwritten if the cloud copy is newer.
+        Characters sync automatically both ways: edits on this device upload as you make them, and anything from
+        your account that this device doesn't have yet downloads as soon as you're signed in — no need to click
+        anything. A local character is only ever overwritten by a cloud copy if that cloud copy is newer. The
+        buttons above are just a manual fallback if you ever want to force a full re-sync.
       </p>
       {message && (
         <p className={`mt-3 text-sm ${message.kind === 'error' ? 'text-red-700 dark:text-red-400' : 'text-emerald-700 dark:text-emerald-400'}`}>
