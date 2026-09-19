@@ -50,7 +50,7 @@ function HealthBar({ current, max, temp }: { current: number; max: number; temp:
   const color = pct <= 25 ? 'bg-red-600' : pct <= 50 ? 'bg-amber-500' : 'bg-emerald-600';
   return (
     <div className="flex items-center gap-2">
-      <div className="relative h-5 flex-1 overflow-hidden rounded-full bg-stone-200 dark:bg-stone-700">
+      <div className="relative h-5 flex-1 overflow-hidden rounded-full bg-red-800">
         <div className={`h-full ${color} transition-all duration-300`} style={{ width: `${pct}%` }} />
         <span className="absolute inset-0 flex items-center justify-center text-xs font-semibold text-white [text-shadow:0_1px_2px_rgb(0_0_0_/_0.6)]">
           {current} / {max}
